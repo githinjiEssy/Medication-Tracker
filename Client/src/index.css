@@ -1,14 +1,61 @@
+@import "tailwindcss";
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  /* colors */
+  --background: #f7fafc;
+  --foreground: #0f1724;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  --border: #00000014;
+  --input: #ffffff;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --primary: #0b7285;
+  --primary-foreground: #ffffff;
+
+  --secondary: #e6f6f8;
+  --secondary-foreground: #07474f;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #9aa4b2;
+
+  --success: #2f9e44;
+  --success-foreground: #ffffff;
+
+  --accent: #f59e0b;
+  --accent-foreground: #0f1724;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  --warning: #f97316;
+
+  --card: #ffffff;
+  --card-foreground: #0f1724;
+
+  --sidebar: #eaf6f8;
+  --sidebar-foreground: #064048;
+  --sidebar-primary: #0b7285;
+  --sidebar-primary-foreground: #ffffff;
+
+  /* border-radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* font sizes */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+
+  /* Font weights */
+  --font-light: 300;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
 }
