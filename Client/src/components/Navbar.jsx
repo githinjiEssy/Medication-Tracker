@@ -1,7 +1,10 @@
 import React from 'react'
 import { Pill } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 function Navbar() {
+  const navigate = useNavigate();
+
   return (
     <nav className='w-full flex justify-center items-center'>
       <div className='flex justify-between items-center p-4 w-[90%] border-b border-[var(--muted-foreground)]'>
@@ -17,7 +20,9 @@ function Navbar() {
           <a href="#" className="hover:text-teal-600">Security</a>
           <a href="#" className="hover:text-teal-600">Pricing</a>
         </div>
-        <button className="bg-[var(--primary)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-teal-700 transition">
+        <button
+          onClick={() => navigate('/signup')}
+         className="bg-[var(--primary)] text-white px-6 py-2 rounded-lg font-semibold hover:bg-teal-700 transition">
           Get Started
         </button>
       </div>

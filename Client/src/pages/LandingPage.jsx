@@ -8,6 +8,7 @@ import { CalendarClock, BellRing, Pill, CheckCircle2 } from 'lucide-react'
 import { Quote, Star } from 'lucide-react'
 import { Zap, ArrowRight, CheckCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
+import Footer from '../components/Footer'
 
 function LandingPage() {
   const steps = [
@@ -55,23 +56,6 @@ function LandingPage() {
       content: "Managing my father's 8 different medications was a nightmare before this. Now, the family sync feature keeps everyone on the same page.",
       avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emma",
       rating: 4
-    }
-  ];
-
-  const currentYear = new Date().getFullYear();
-
-  const footerLinks = [
-    {
-      title: "Product",
-      links: ["Features", "Security", "Pricing", "Mobile App"]
-    },
-    {
-      title: "Company",
-      links: ["About Us", "Careers", "Press", "Contact"]
-    },
-    {
-      title: "Resources",
-      links: ["Help Center", "Privacy Policy", "Terms of Service", "Trust Center"]
     }
   ];
 
@@ -408,6 +392,9 @@ function LandingPage() {
           </p>
         </div>
       </section>
+
+      {/* =================== Footer ====================== */}
+      <Footer />
 
     </div>
   )

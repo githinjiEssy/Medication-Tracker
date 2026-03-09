@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const HeroSection = () => {
+  const navigate = useNavigate();
   // Animation Variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -54,7 +56,9 @@ const HeroSection = () => {
           </motion.p>
           
           <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
-            <button className="bg-teal-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-teal-200 hover:bg-teal-700 hover:-translate-y-1 transition-all duration-300">
+            <button 
+            onClick={() => navigate('/signup')}
+            className="bg-teal-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-teal-200 hover:bg-teal-700 hover:-translate-y-1 transition-all duration-300">
               Get Started Free
             </button>
             <button className="group flex items-center gap-3 bg-white border border-gray-200 text-gray-700 px-8 py-4 rounded-xl font-bold hover:bg-gray-50 transition-all">
