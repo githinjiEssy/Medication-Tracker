@@ -5,6 +5,7 @@ import {
   ArrowLeft, Clock, Calendar, Pill, ChevronRight 
 } from 'lucide-react';
 import AddSymptomModal from '../components/AddSymptomModal';
+import TopBar from '../components/TopBar';
 
 const AdverseReactions = () => {
   const [isSymptomModalOpen, setSymptomModalOpen] = useState(false);
@@ -112,6 +113,7 @@ const AdverseReactions = () => {
     <div className="flex min-h-screen bg-[#f8fafb]">
       <Sidebar />
       <main className="flex-1 p-8">
+        <TopBar />
         
         {!selectedSymptom ? (
           <div className="animate-in fade-in duration-500">

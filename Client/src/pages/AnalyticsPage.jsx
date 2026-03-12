@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
+import TopBar from '../components/TopBar';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -44,6 +45,8 @@ const AnalyticsPage = () => {
       <Sidebar />
 
       <main className="flex-1 p-8">
+        <TopBar />
+
         {/* Header with Export Options */}
         <header className="flex justify-between items-end mb-10">
           <div>
