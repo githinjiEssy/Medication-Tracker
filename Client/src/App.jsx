@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard'
 import MedicationsPage from './pages/MedicationsPage'
 import AdverseReactions from './pages/AdverseReactionsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import NotificationsPage from './pages/NotificationsPage'
+import SchedulePage from './pages/SchedulePage'
 
 function App() {
 
@@ -17,9 +19,11 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/dashboard" element={<Dashboard/>} />
+        <Route path="/schedule" element={<SchedulePage />} />
         <Route path="/medications" element={<MedicationsPage />} />
         <Route path="/reactions" element={<AdverseReactions />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Routes>
     </Router>
   )

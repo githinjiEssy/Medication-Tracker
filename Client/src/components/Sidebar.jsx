@@ -9,7 +9,8 @@ import {
   Heart,
   UserCircle,
   Accessibility,
-  Bell
+  Bell,
+  CalendarCheck2
 } from 'lucide-react';
 
 const Sidebar = () => {
@@ -18,6 +19,7 @@ const Sidebar = () => {
 
   const menuItems = [
     { name: 'Today', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'Schedule', icon: CalendarCheck2, path: '/schedule' },
     { name: 'Medications', icon: Pill, path: '/medications' },
     { name: 'Adverse Reactions', icon: AlertCircle, path: '/reactions' },
     { name: 'Analytics', icon: BarChart3, path: '/analytics' },
