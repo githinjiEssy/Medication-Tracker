@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
 import MedicationsPage from './pages/MedicationsPage'
 import AdverseReactions from './pages/AdverseReactionsPage'
+import AnalyticsPage from './pages/AnalyticsPage'
 
 function App() {
 
@@ -18,6 +19,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard/>} />
         <Route path="/medications" element={<MedicationsPage />} />
         <Route path="/reactions" element={<AdverseReactions />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
       </Routes>
     </Router>
   )
