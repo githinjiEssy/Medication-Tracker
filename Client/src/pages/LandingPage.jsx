@@ -68,7 +68,7 @@ function LandingPage() {
       <HeroSection />
 
       {/* ================== Features Grid ================== */}
-      <section className="bg-slate-50/50 py-24 px-6 relative overflow-hidden">
+      <section id='feature' className="bg-slate-50/50 py-24 px-6 relative overflow-hidden">
         {/* Subtle background decoration */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
         
@@ -108,7 +108,7 @@ function LandingPage() {
       </section>
 
       {/* ================== How it works section ==================*/}
-      <section className="py-24 px-6 bg-white overflow-hidden">
+      <section id='product' className="py-24 px-6 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-20 items-center">
           
           {/* Left Side: Dynamic Illustration */}

@@ -26,7 +26,7 @@ const Sidebar = () => {
 
   const settingItems = [
     { name: 'Profile & Security', icon: UserCircle, path: '/profile' },
-    { name: 'Accessibility', icon: Accessibility, path: '/accessibility' },
+    // { name: 'Accessibility', icon: Accessibility, path: '/accessibility' },
     { name: 'Settings', icon: Settings, path: '/settings' },
   ];
 

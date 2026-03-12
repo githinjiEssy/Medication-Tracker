@@ -15,10 +15,10 @@ function Navbar() {
           MedTrack
         </div>
         <div className="hidden md:flex gap-8 text-gray-600 font-medium">
-          <a href="#" className="hover:text-teal-600">Product</a>
-          <a href="#" className="hover:text-teal-600">Features</a>
+          <a href="#feature" className="hover:text-teal-600">Features</a>
+          <a href="#product" className="hover:text-teal-600">Product</a>
           <a href="#" className="hover:text-teal-600">Security</a>
-          <a href="#" className="hover:text-teal-600">Pricing</a>
+          {/* <a href="#" className="hover:text-teal-600">Pricing</a> */}
         </div>
         <button
           onClick={() => navigate('/signup')}
