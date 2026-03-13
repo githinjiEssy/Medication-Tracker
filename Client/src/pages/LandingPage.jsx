@@ -9,6 +9,7 @@ import { Quote, Star } from 'lucide-react'
 import { Zap, ArrowRight, CheckCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Footer from '../components/Footer'
+import prescription from '../assets/images/prescription-illustration.png'
 
 function LandingPage() {
   const steps = [
@@ -130,7 +131,7 @@ function LandingPage() {
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                 className="text-[160px] drop-shadow-2xl"
               >
-                👨‍⚕️
+                <img src={prescription} alt="Prescription Illustration" srcset="" />
               </motion.div>
 
               {/* Floating Interaction Card */}

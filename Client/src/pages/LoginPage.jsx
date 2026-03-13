@@ -1,23 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react'; // Added useContext
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Heart, User, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react'; // Swapped Mail for User
+import { AuthContext } from '../context/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext); // Access login from Context
+  
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Note: Django LoginView expects 'username' (which can be the email if configured)
+  const [formData, setFormData] = useState({ username: '', password: '' });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Logging in with:", formData);
-    // Add authentication logic here
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await login(formData.username, formData.password);
+      // Success is handled inside AuthContext (it navigates to /dashboard)
+    } catch (err) {
+      console.error("Login Error:", err);
+      setError(err.response?.data?.non_field_errors?.[0] || 'Invalid username or password.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col lg:flex-row">
       
-      {/* Left Side: Branding (Matches Signup Theme) */}
+      {/* Left Side: Branding */}
       <motion.div 
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
@@ -74,20 +91,32 @@ const LoginPage = () => {
             </p>
           </div>
 
+          {/* Error Message Display */}
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-rose-50 border border-rose-100 text-rose-600 text-sm font-bold rounded-xl"
+            >
+              {error}
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+            {/* Username/Email Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 pl-1">Email Address</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-2 pl-1">Username</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-teal-600 transition-colors">
-                  <Mail size={20} />
+                  <User size={20} />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="name@example.com"
+                  placeholder="Enter your username"
                   className="w-full py-3.5 pl-12 pr-4 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500 transition-all font-medium"
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 />
               </div>
             </div>
@@ -107,6 +136,7 @@ const LoginPage = () => {
                   required
                   placeholder="••••••••"
                   className="w-full py-3.5 pl-12 pr-12 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-100 focus:border-teal-500 transition-all font-medium"
+                  value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 />
                 <button
@@ -127,24 +157,35 @@ const LoginPage = () => {
 
             {/* Submit Button */}
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: isLoading ? 1 : 1.02 }}
+              whileTap={{ scale: isLoading ? 1 : 0.98 }}
+              disabled={isLoading}
               type="submit"
-              className="w-full bg-teal-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl shadow-teal-100 hover:bg-teal-700 transition-all flex items-center justify-center gap-2 group"
+              className={`w-full py-4 rounded-xl font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-2 group ${
+                isLoading 
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                : 'bg-teal-600 text-white shadow-teal-100 hover:bg-teal-700'
+              }`}
             >
-              Log In
-              <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              {isLoading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <>
+                  Log In
+                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </motion.button>
           </form>
 
-          {/* Social Login Separator */}
+          {/* Social Separator ... (Same as your code) */}
           <div className="relative my-10">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-100"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-slate-400">Or continue with</span>
-            </div>
+             <div className="absolute inset-0 flex items-center">
+               <div className="w-full border-t border-slate-100"></div>
+             </div>
+             <div className="relative flex justify-center text-sm">
+               <span className="px-4 bg-white text-slate-400">Or continue with</span>
+             </div>
           </div>
 
           <button className="w-full py-3 border border-slate-200 rounded-xl flex items-center justify-center gap-3 font-semibold text-slate-700 hover:bg-slate-50 transition-all">
