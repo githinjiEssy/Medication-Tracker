@@ -1,3 +1,5 @@
+import re
+
 from rest_framework import serializers
 from django.utils import timezone
 from datetime import datetime, date
@@ -152,7 +154,7 @@ class MedicationDetailSerializer(serializers.ModelSerializer):
     schedules = MedicationScheduleSerializer(
         many=True,
         read_only=True,
-        source='schedules'
+        
     )
     intakes = MedicationIntakeSerializer(
         many=True,
@@ -196,6 +198,18 @@ class MedicationCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'end_date': 'End date cannot be before start date.'
             })
+            
+        #validate dosage is greater than 0
+        dosage = data.get('dosage')
+        if dosage:
+            numbers = re.findall(r'\d+', str(dosage))
+            if numbers:
+                dosage_value = int(numbers[0])
+                if dosage_value <= 0:
+                    raise serializers.ValidationError({
+                        'dosage': 'Dosage must be greater than 0.'
+                    })
+            
         
         # Validate frequency
         frequency = data.get('frequency')
@@ -307,5 +321,4 @@ class AdherenceStatsSerializer(serializers.Serializer):
     total_taken = serializers.IntegerField()
     total_missed = serializers.IntegerField()
     adherence_rate = serializers.FloatField()
-    by_medication = serializers.DictField()
-    weekly_trend = serializers.ListField()
+    daily_trend = serializers.ListField()

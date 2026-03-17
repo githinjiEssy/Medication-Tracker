@@ -334,7 +334,7 @@ class MedicationViewSet(viewsets.ModelViewSet):
         try:
             reminder = MedicationReminder.objects.get(
                 medication=medication,
-                scheduled_time=intake.scheduled_time,
+                reminder_time=intake.scheduled_time,
                 is_sent=False
             )
             reminder.is_sent = True

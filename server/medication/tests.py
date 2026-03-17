@@ -297,7 +297,7 @@ class ScheduleAPITests(APITestCase):
         """Test listing schedules"""
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
     
     def test_update_schedule(self):
         """Test updating schedule"""
@@ -355,14 +355,14 @@ class IntakeAPITests(APITestCase):
         """Test listing intakes"""
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
     
     def test_filter_intakes_by_date(self):
         """Test filtering intakes by date"""
         today = date.today().isoformat()
         response = self.client.get(self.list_url, {'date': today})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
     
     def test_add_comment_to_intake(self):
         """Test adding comment to intake"""
@@ -563,3 +563,48 @@ class AuthorizationTests(APITestCase):
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+        
+class MedicationSQATests(APITestCase):
+    """
+    SQA Test suite for Medication Entry (FR-01) validating EP and BVA techniques.
+    """
+    def setUp(self):
+        self.user = User.objects.create_user(username='sqa_tester', password='testpass123')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.url = reverse('medication-list')
+
+    def test_tc_dat_07_end_date_before_start_date(self):
+        """Expected Outcome: 400 Bad Request"""
+        data = {
+            "name": "Aspirin",
+            "dosage": "100mg",
+            "frequency": "ONCE",
+            "dosage_form": "TABLET",
+            "route": "ORAL",
+            "prescribed_date": "2026-03-15",
+            "start_date": "2026-03-20",
+            "end_date": "2026-03-15",
+            "status": "ACTIVE"
+        }
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('end_date', response.data)
+
+    def test_tc_dat_18_dosage_lower_boundary(self):
+        """Expected Outcome: 400 Bad Request"""
+        data = {
+            "name": "Vitamin C",
+            "dosage": "0mg",
+            "frequency": "ONCE",
+            "dosage_form": "TABLET",
+            "route": "ORAL",
+            "prescribed_date": "2026-03-15",
+            "start_date": "2026-03-15",
+            "end_date": "2026-03-20",
+            "status": "ACTIVE"
+        }
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('dosage', response.data)
