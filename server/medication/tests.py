@@ -608,3 +608,63 @@ class MedicationSQATests(APITestCase):
         response = self.client.post(self.url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('dosage', response.data)
+        
+        
+class SecuritySQATests(APITestCase):
+    """
+    SQA Test suite for Authentication (NFR-14) validating Equivalence Partitioning (EP) mismatches.
+    """
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('auth_register')
+        self.change_password_url = reverse('auth_change_password')
+        
+        self.user_data = {
+            'username': 'sqa_security_user',
+            'email': 'security@test.com',
+            'password': 'SecurePass123!',
+            'password2': 'SecurePass123!',
+            'first_name': 'SQA',
+            'last_name': 'Tester',
+            'phone_number': '+1234567890',
+            'date_of_birth': '1990-01-01',
+            'gender': 'M',
+            'blood_group': 'O+'
+        }
+
+    def test_tc_aut_01_registration_password_mismatch(self):
+        """
+        EP (Mismatch): Registration passwords do not match.
+        Expected Outcome: 400 Bad Request
+        """
+        # Inject the EP Mismatch
+        self.user_data['password2'] = 'MismatchedPass123!' 
+        
+        response = self.client.post(self.register_url, self.user_data, format='json')
+        
+        # Assert the system blocks the registration
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password', response.data)
+        self.assertEqual(response.data['password'][0], 'Password fields must match.')
+
+    def test_tc_aut_04_change_password_mismatch(self):
+        """
+        EP (Mismatch): New passwords do not match during change password flow.
+        Expected Outcome: 400 Bad Request
+        """
+        # 1. Create and authenticate a user first
+        user = User.objects.create_user(username='changepass_user', password='OldPassword123!')
+        self.client.force_authenticate(user=user)
+
+        # 2. Attempt to change password with an EP Mismatch
+        bad_password_data = {
+            'old_password': 'OldPassword123!',
+            'new_password': 'NewPassword123!',
+            'new_password2': 'TotallyDifferent123!' # EP Mismatch!
+        }
+
+        response = self.client.post(self.change_password_url, bad_password_data, format='json')
+        
+        # Assert the system blocks the password change
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', response.data)
