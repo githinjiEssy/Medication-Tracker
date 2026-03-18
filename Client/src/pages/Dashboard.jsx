@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import AddMedicationModal from '../components/AddMedicationModal';
+import AddSymptomModal from '../components/AddSymptomModal';
 import { 
   Plus, 
   AlertTriangle, 
@@ -16,6 +17,7 @@ import {
 
 const Dashboard = () => {
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
+  const [isSymptomModalOpen, setIsSymptomModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -153,7 +155,9 @@ const Dashboard = () => {
                     : "Your medical profile is fully optimized for safety alerts."}
                 </p>
 
-                <button className="w-full py-3 mt-2 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 group">
+                <button 
+                  onClick={() => navigate('/profile')}
+                className="w-full py-3 mt-2 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 group">
                   Complete Profile <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
@@ -170,6 +174,7 @@ const Dashboard = () => {
                   <Plus size={20} /> Add Prescription
                 </button>
                 <button 
+                  onClick={() => setIsSymptomModalOpen(true)}
                   className="w-full py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold flex items-center justify-center gap-3 transition-all"
                 >
                   <AlertTriangle size={20} className="text-rose-400" /> Log Reaction
@@ -188,7 +193,9 @@ const Dashboard = () => {
               <p className="text-sm text-slate-700 leading-relaxed font-medium">
                 "Your adherence has improved by <span className="text-teal-600 font-bold">12%</span> this week. Keeping up this consistency helps stabilize your blood pressure."
               </p>
-              <button className="mt-6 w-full py-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-500 hover:text-teal-600 transition-colors flex items-center justify-center gap-2">
+              <button 
+              onClick={() => navigate("/analytics")}
+              className="mt-6 w-full py-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-500 hover:text-teal-600 transition-colors flex items-center justify-center gap-2">
                 Full Report <ChevronRight size={14} />
               </button>
             </section>
@@ -200,6 +207,10 @@ const Dashboard = () => {
         <AddMedicationModal 
           isOpen={isMedModalOpen} 
           onClose={() => setIsMedModalOpen(false)} 
+        />
+        <AddSymptomModal 
+          isOpen={isSymptomModalOpen} 
+          onClose={() => setIsSymptomModalOpen(false)} 
         />
       </main>
     </div>

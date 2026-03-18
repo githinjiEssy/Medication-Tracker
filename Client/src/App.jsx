@@ -10,6 +10,8 @@ import AdverseReactions from './pages/AdverseReactionsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import NotificationsPage from './pages/NotificationsPage'
 import SchedulePage from './pages/SchedulePage'
+import AccountSettings from './pages/SettingsPage'
+import ProfilePage from './pages/ProfilePage'
 
 function App() {
 
@@ -26,6 +28,8 @@ function App() {
           <Route path="/reactions" element={<AdverseReactions />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<AccountSettings />} />
         </Routes>
       </AuthProvider>
     </Router>
