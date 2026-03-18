@@ -297,7 +297,7 @@ class ScheduleAPITests(APITestCase):
         """Test listing schedules"""
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
     
     def test_update_schedule(self):
         """Test updating schedule"""
@@ -355,14 +355,14 @@ class IntakeAPITests(APITestCase):
         """Test listing intakes"""
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
     
     def test_filter_intakes_by_date(self):
         """Test filtering intakes by date"""
         today = date.today().isoformat()
         response = self.client.get(self.list_url, {'date': today})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data['count'], 1)
     
     def test_add_comment_to_intake(self):
         """Test adding comment to intake"""
@@ -563,3 +563,108 @@ class AuthorizationTests(APITestCase):
         response = self.client.get(url)
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+        
+class MedicationSQATests(APITestCase):
+    """
+    SQA Test suite for Medication Entry (FR-01) validating EP and BVA techniques.
+    """
+    def setUp(self):
+        self.user = User.objects.create_user(username='sqa_tester', password='testpass123')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.url = reverse('medication-list')
+
+    def test_tc_dat_07_end_date_before_start_date(self):
+        """Expected Outcome: 400 Bad Request"""
+        data = {
+            "name": "Aspirin",
+            "dosage": "100mg",
+            "frequency": "ONCE",
+            "dosage_form": "TABLET",
+            "route": "ORAL",
+            "prescribed_date": "2026-03-15",
+            "start_date": "2026-03-20",
+            "end_date": "2026-03-15",
+            "status": "ACTIVE"
+        }
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('end_date', response.data)
+
+    def test_tc_dat_18_dosage_lower_boundary(self):
+        """Expected Outcome: 400 Bad Request"""
+        data = {
+            "name": "Vitamin C",
+            "dosage": "0mg",
+            "frequency": "ONCE",
+            "dosage_form": "TABLET",
+            "route": "ORAL",
+            "prescribed_date": "2026-03-15",
+            "start_date": "2026-03-15",
+            "end_date": "2026-03-20",
+            "status": "ACTIVE"
+        }
+        response = self.client.post(self.url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('dosage', response.data)
+        
+        
+class SecuritySQATests(APITestCase):
+    """
+    SQA Test suite for Authentication (NFR-14) validating Equivalence Partitioning (EP) mismatches.
+    """
+    def setUp(self):
+        self.client = APIClient()
+        self.register_url = reverse('auth_register')
+        self.change_password_url = reverse('auth_change_password')
+        
+        self.user_data = {
+            'username': 'sqa_security_user',
+            'email': 'security@test.com',
+            'password': 'SecurePass123!',
+            'password2': 'SecurePass123!',
+            'first_name': 'SQA',
+            'last_name': 'Tester',
+            'phone_number': '+1234567890',
+            'date_of_birth': '1990-01-01',
+            'gender': 'M',
+            'blood_group': 'O+'
+        }
+
+    def test_tc_aut_01_registration_password_mismatch(self):
+        """
+        EP (Mismatch): Registration passwords do not match.
+        Expected Outcome: 400 Bad Request
+        """
+        # Inject the EP Mismatch
+        self.user_data['password2'] = 'MismatchedPass123!' 
+        
+        response = self.client.post(self.register_url, self.user_data, format='json')
+        
+        # Assert the system blocks the registration
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('password', response.data)
+        self.assertEqual(response.data['password'][0], 'Password fields must match.')
+
+    def test_tc_aut_04_change_password_mismatch(self):
+        """
+        EP (Mismatch): New passwords do not match during change password flow.
+        Expected Outcome: 400 Bad Request
+        """
+        # 1. Create and authenticate a user first
+        user = User.objects.create_user(username='changepass_user', password='OldPassword123!')
+        self.client.force_authenticate(user=user)
+
+        # 2. Attempt to change password with an EP Mismatch
+        bad_password_data = {
+            'old_password': 'OldPassword123!',
+            'new_password': 'NewPassword123!',
+            'new_password2': 'TotallyDifferent123!' # EP Mismatch!
+        }
+
+        response = self.client.post(self.change_password_url, bad_password_data, format='json')
+        
+        # Assert the system blocks the password change
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', response.data)
