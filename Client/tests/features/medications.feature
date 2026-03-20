@@ -14,3 +14,10 @@ Feature: Medication Management
     When I click the "Add New Prescription" medication button
     Then I should see the "Add New Prescription" modal header
     And the "Medication Name" input should be visible
+
+  Scenario: Deleting a medication from the cabinet
+    Given I am on the Medications page
+    And I should see "Metformin" in my cabinet
+    When I click the "Delete" button for "Metformin"
+    And I confirm the deletion
+    Then I should not see "Metformin"
