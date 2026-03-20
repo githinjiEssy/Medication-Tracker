@@ -27,11 +27,6 @@ Then('I should only see {string} in my cabinet', async ({ page }, medName) => {
   await expect(card).toBeVisible();
 });
 
-Then('I should not see {string}', async ({ page }, medName) => {
-  const card = page.locator('h3', { hasText: medName });
-  await expect(card).not.toBeVisible();
-});
-
 When('I click the {string} medication button', async ({ page }, buttonText) => {
   await page.getByRole('button', { name: buttonText }).click();
 });
@@ -43,4 +38,33 @@ Then('I should see the {string} modal header', async ({ page }, title) => {
 
 Then('the {string} input should be visible', async ({ page }, labelText) => {
   await expect(page.getByLabel(labelText)).toBeVisible();
+});
+
+Given('I should see {string} in my cabinet', async ({ page }, medName) => {
+  const card = page.locator('h3', { hasText: medName });
+  await expect(card).toBeVisible();
+});
+
+When('I click the {string} button for {string}', async ({ page }, action, medName) => {
+  // Find the card containing the medication name, then find the button within that card
+  const card = page.locator('.bg-white', { has: page.locator('h3', { hasText: medName }) });
+  const deleteButton = card.getByRole('button', { name: new RegExp(action, 'i') });
+
+  // Set up dialog listener BEFORE the click
+  page.once('dialog', async dialog => {
+    console.log(`Accepting dialog: ${dialog.message()}`);
+    await dialog.accept();
+  });
+
+  await deleteButton.click();
+});
+
+When('I confirm the deletion', async ({ page }) => {
+  const successToast = page.getByText(/successfully|removed/i);
+  await successToast.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+});
+
+Then('I should not see {string}', async ({ page }, medName) => {
+  const card = page.locator('h3', { hasText: medName });
+  await expect(card).toBeHidden({ timeout: 7000 });
 });

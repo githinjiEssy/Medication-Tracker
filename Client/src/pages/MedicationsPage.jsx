@@ -10,16 +10,30 @@ import {
 
 // --- SUB-COMPONENT: MEDICATION CARD ---
 // Defined here to keep the main component clean and readable
-const MedicationCard = ({ med, onViewDetails }) => (
+const MedicationCard = ({ med, onViewDetails, onDelete }) => (
   <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
     <div>
       <div className="flex justify-between items-start mb-6">
         <div className={`w-12 h-12 ${med.color} rounded-2xl flex items-center justify-center text-white shadow-inner`}>
           <Pill size={24} />
         </div>
-        <button className="text-slate-300 hover:text-slate-600 transition-colors">
-          <MoreVertical size={20} />
-        </button>
+
+        <div className="flex gap-2">
+          <button 
+            title="Delete"
+            onClick={(e) => {
+              e.stopPropagation(); 
+              onDelete(med.id);
+            }}
+            className="text-slate-300 hover:text-red-500 transition-colors"
+          >
+            <Trash2 size={20} />
+          </button>
+          <button className="text-slate-300 hover:text-slate-600 transition-colors">
+            <MoreVertical size={20} />
+          </button>
+        </div>
+
       </div>
       <div className="mb-6">
         <h3 className="text-xl font-black text-slate-900">{med.name}</h3>
@@ -63,9 +77,8 @@ const MedicationsPage = () => {
   const [selectedMed, setSelectedMed] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
-
-  const prescriptions = [
-    { 
+  const [prescriptions, setPrescriptions] = useState([
+        { 
       id: 1, 
       name: "Lisinopril", 
       dose: "10 mg", 
@@ -98,7 +111,52 @@ const MedicationsPage = () => {
       color: "bg-orange-500",
       instructions: "Avoid significant changes in intake of foods high in Vitamin K."
     }
-  ];
+  ]);
+
+  const handleDelete = (id) => {
+  // Simple confirmation (matches your Cucumber "I confirm" step)
+  if (window.confirm("Are you sure you want to delete this medication?")) {
+    const updatedList = prescriptions.filter(med => med.id !== id);
+    setPrescriptions(updatedList);
+    setSelectedMed(null); // Go back to the cabinet view if we were in details
+  }
+};
+
+  // const prescriptions = [
+  //   { 
+  //     id: 1, 
+  //     name: "Lisinopril", 
+  //     dose: "10 mg", 
+  //     frequency: "Once daily", 
+  //     refills: 2, 
+  //     status: "Active",
+  //     lastTaken: "Today, 08:00 AM",
+  //     color: "bg-teal-500",
+  //     instructions: "Take on an empty stomach at least 30 minutes before breakfast."
+  //   },
+  //   { 
+  //     id: 2, 
+  //     name: "Metformin", 
+  //     dose: "500 mg", 
+  //     frequency: "Twice daily", 
+  //     refills: 5, 
+  //     status: "Active",
+  //     lastTaken: "Yesterday, 08:30 PM",
+  //     color: "bg-blue-500",
+  //     instructions: "Take with a full meal to reduce stomach upset."
+  //   },
+  //   { 
+  //     id: 3, 
+  //     name: "Warfarin", 
+  //     dose: "3 mg", 
+  //     frequency: "Once daily", 
+  //     refills: 0, 
+  //     status: "Refill Needed",
+  //     lastTaken: "Today, 09:15 AM",
+  //     color: "bg-orange-500",
+  //     instructions: "Avoid significant changes in intake of foods high in Vitamin K."
+  //   }
+  // ];
 
   // Logic to filter meds based on TopBar input
   const filteredMeds = prescriptions.filter(med => 
@@ -138,6 +196,7 @@ const MedicationsPage = () => {
                   key={med.id} 
                   med={med} 
                   onViewDetails={setSelectedMed} 
+                  onDelete={handleDelete}
                 />
               ))}
               
@@ -188,7 +247,9 @@ const MedicationsPage = () => {
                 <button className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-slate-600 font-bold hover:bg-slate-50 transition-all shadow-sm">
                   <Edit2 size={18}/> Edit
                 </button>
-                <button className="p-3 bg-red-50 text-red-500 rounded-2xl border border-red-100 hover:bg-red-100 transition-all">
+                <button 
+                  onClick={() => handleDelete(selectedMed.id)}
+                  className="p-3 bg-red-50 text-red-500 rounded-2xl border border-red-100 hover:bg-red-100 transition-all">
                   <Trash2 size={20}/>
                 </button>
               </div>
