@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
+    'django_behave',
     
     # Local apps
     'oauth',
@@ -93,6 +94,14 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Behave configuration
+BEHAVE_DRF = {
+    'features_dir': [
+        os.path.join(BASE_DIR, 'oauth/features'),
+        os.path.join(BASE_DIR, 'medication/features'),
+    ]
+}
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
