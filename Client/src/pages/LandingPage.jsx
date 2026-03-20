@@ -131,7 +131,7 @@ function LandingPage() {
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                 className="text-[160px] drop-shadow-2xl"
               >
-                <img src={prescription} alt="Prescription Illustration" srcset="" />
+                <img src={prescription} alt="Prescription Illustration" />
               </motion.div>
 
               {/* Floating Interaction Card */}

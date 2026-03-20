@@ -105,12 +105,13 @@ const LoginPage = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Username/Email Field */}
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2 pl-1">Username</label>
+              <label htmlFor="username" className="block text-sm font-semibold text-slate-700 mb-2 pl-1">Username</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-teal-600 transition-colors">
                   <User size={20} />
                 </div>
                 <input
+                  id="username"
                   type="text"
                   required
                   placeholder="Enter your username"
@@ -124,7 +125,7 @@ const LoginPage = () => {
             {/* Password Field */}
             <div>
               <div className="flex justify-between items-center mb-2 pl-1">
-                <label className="text-sm font-semibold text-slate-700">Password</label>
+                <label htmlFor="password" className="text-sm font-semibold text-slate-700">Password</label>
                 <a href="#" className="text-xs font-bold text-teal-600 hover:text-teal-700">Forgot Password?</a>
               </div>
               <div className="relative group">
@@ -132,6 +133,7 @@ const LoginPage = () => {
                   <Lock size={20} />
                 </div>
                 <input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="••••••••"
@@ -144,6 +146,7 @@ const LoginPage = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600"
                 >
+                  {/* show / hide password button*/}
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
