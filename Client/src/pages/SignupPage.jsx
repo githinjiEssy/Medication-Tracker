@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, User, Mail, Lock, CalendarDays, Phone, CheckCircle2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 
@@ -76,6 +78,8 @@ const InputField = ({ icon: Icon, label, error, success, showPasswordToggle, ...
 };
 
 const SignupPage = () => {
+  const { signup } = useContext(AuthContext);
+  const navigate = useNavigate();
   // Form State
   const [formData, setFormData] = useState({
     firstName: '',
@@ -116,17 +120,26 @@ const SignupPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Simulate validation
-    let newErrors = {};
-    if (!formData.email.includes('@')) newErrors.email = 'Invalid email address';
-    if (formData.password.length < 8) newErrors.password = 'Must be at least 8 characters';
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   // Simulate validation
+  //   let newErrors = {};
+  //   if (!formData.email.includes('@')) newErrors.email = 'Invalid email address';
+  //   if (formData.password.length < 8) newErrors.password = 'Must be at least 8 characters';
     
-    setErrors(newErrors);
+  //   setErrors(newErrors);
 
-    if (Object.keys(newErrors).length === 0) {
-      alert('Signup request submitted! (Simulated)');
+  //   if (Object.keys(newErrors).length === 0) {
+  //     alert('Signup request submitted! (Simulated)');
+  //   }
+  // };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await signup(formData); 
+    } catch (err) {
+      setErrors({ form: "Signup failed" });
     }
   };
 
