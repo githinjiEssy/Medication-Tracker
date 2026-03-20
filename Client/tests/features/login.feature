@@ -7,7 +7,7 @@ Feature: User Login
     Given I am on the MedTrack login page
     When I fill in "Username" with "health_user"
     And I fill in "Password" with "securePassword123"
-    And I click the "Log In" button
+    And I click the "Log In" login button
     Then I should see the loading spinner
     And I should eventually be redirected to the dashboard
 
@@ -15,5 +15,5 @@ Feature: User Login
     Given I am on the MedTrack login page
     When I fill in "Username" with "wrong_user"
     And I fill in "Password" with "wrong_pass"
-    And I click the "Log In" button
+    And I click the "Log In" login button
     Then I should see an error message "Invalid username or password."

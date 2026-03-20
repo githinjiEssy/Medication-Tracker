@@ -52,20 +52,20 @@ const AddMedicationModal = ({ isOpen, onClose }) => {
               {/* Row 1: Name & Dose */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Medication Name</label>
-                  <input type="text" placeholder="e.g. Lisinopril" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
+                  <label htmlFor='medName' className="text-sm font-bold text-slate-700 ml-1">Medication Name</label>
+                  <input id="medName" type="text" placeholder="e.g. Lisinopril" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Dosage</label>
-                  <input type="text" placeholder="e.g. 10mg" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
+                  <label htmlFor='dosage' className="text-sm font-bold text-slate-700 ml-1">Dosage</label>
+                  <input id="dosage" type="text" placeholder="e.g. 10mg" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
                 </div>
               </div>
 
               {/* Row 2: Frequency & Refills */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Frequency</label>
-                  <select className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all cursor-pointer">
+                  <label htmlFor='frequency' className="text-sm font-bold text-slate-700 ml-1">Frequency</label>
+                  <select id="frequency" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all cursor-pointer">
                     <option>Once daily</option>
                     <option>Twice daily</option>
                     <option>Three times daily</option>
@@ -73,17 +73,17 @@ const AddMedicationModal = ({ isOpen, onClose }) => {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1 flex items-center gap-1">
+                  <label htmlFor='refills' className="text-sm font-bold text-slate-700 ml-1 flex items-center gap-1">
                     <Hash size={14} className="text-slate-400" /> Refills Remaining
                   </label>
-                  <input type="number" placeholder="0" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
+                  <input id="refills" type="number" placeholder="0" className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all" />
                 </div>
               </div>
 
               {/* Row 3: Date Logic */}
               <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <label htmlFor='duration' className="text-sm font-bold text-slate-800 flex items-center gap-2">
                     <Calendar size={16} className="text-teal-600" />
                     Medication Duration
                   </label>
@@ -124,8 +124,8 @@ const AddMedicationModal = ({ isOpen, onClose }) => {
 
               {/* Row 4: Instructions */}
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Special Instructions</label>
-                <textarea rows="2" placeholder="e.g. Take with a glass of water, avoid alcohol..." className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all resize-none" />
+                <label htmlFor='instructions' className="text-sm font-bold text-slate-700 ml-1">Special Instructions</label>
+                <textarea id="instructions" rows="2" placeholder="e.g. Take with a glass of water, avoid alcohol..." className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all resize-none" />
               </div>
 
             </form>
