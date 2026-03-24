@@ -1,16 +1,16 @@
-import React, { useState, useRef, useEffect, useContext } from 'react'; // Added useContext
-import { AuthContext } from '../context/AuthContext'; // Import your context
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext'; 
 import { Search, Bell, User, Check, AlertCircle, ShoppingCart, ArrowRight } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom'; // Added useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const TopBar = ({ searchTerm, setSearchTerm }) => {
-  const { user } = useContext(AuthContext); // Get real user data
+  const { user } = useContext(AuthContext);
   const [isNotifyOpen, setIsNotifyOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
   
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const location = useLocation(); // Used to detect current page
+  const location = useLocation();
 
   // Define pages where the search bar should be HIDDEN
   const hideSearchPages = ['/profile', '/settings'];

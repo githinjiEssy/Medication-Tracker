@@ -1,26 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { User as UserIcon, Camera, Save, Phone, Heart, Activity, Calendar, Users, ShieldCheck, CheckCircle } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { SettingsInput, SettingsSelect, SettingsTextArea } from '../components/FormElements';
+import TopBar from '../components/TopBar';
+import { AuthContext } from '../context/AuthContext';
+import api from '../api/axios';
+import Toast from '../components/Toast';
 
 const Profile = () => {
   const location = useLocation();
 
-  // Simulated "New User" state: Medical fields are empty/blank
-  const [profileData, setProfileData] = useState({
-    fullName: "John Doe",
-    email: "john.doe@medtrack.com",
-    phone_number: "+254712345678",
-    date_of_birth: "1995-08-15",
-    gender: "M",
-    // Medical fields starting blank for new users
-    blood_group: "UNKNOWN",
-    emergency_contact_name: "",
-    emergency_contact_phone: "",
-    allergies: "",
-    chronic_conditions: ""
-  });
+  const { user, updateProfile } = useContext(AuthContext); // Change setUser to updateProfile
+  const [profileData, setProfileData] = useState({ ...user });
+  const [loading, setLoading] = useState(false);
+
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' }); // State for toast notifications
+  // Function to show toast notifications
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    
+    // Use the functional version (t) => ... to avoid closure stale state
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 4000);
+  };
 
   // Calculate completion percentage
   const calculateProgress = () => {
@@ -51,11 +53,33 @@ const Profile = () => {
     }
   }, [location]);
 
+  const handleUpdate = async () => {
+    setLoading(true);
+    try {
+      await updateProfile(profileData); 
+      showToast("Profile updated successfully!", "success"); // Use Toast instead of alert
+    } catch (err) {
+      showToast(err.message || "Failed to update profile", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return null;
+
   return (
     <div className="flex min-h-screen bg-[#f8fafb]">
       <Sidebar />
 
       <main className="flex-1 p-8 overflow-y-auto">
+        {/* Toast Notification */}
+        <Toast 
+          isVisible={toast.visible}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ ...toast, visible: false })}
+        />
+        <TopBar />
         <div className="max-w-4xl mx-auto">
           
           {/* Animated Completion Banner */}
@@ -94,7 +118,7 @@ const Profile = () => {
             <div className="flex items-center gap-6 pb-8 border-b border-gray-100">
               <div className="relative">
                 <div className="w-20 h-20 rounded-full bg-blue-100 border-4 border-white shadow-md overflow-hidden">
-                  <img src={`https://ui-avatars.com/api/?name=${profileData.fullName}&background=0284c7&color=fff`} alt="Profile" />
+                  <img src={`https://ui-avatars.com/api/?name=${profileData.full_name}&background=0284c7&color=fff`} alt="Profile" />
                 </div>
                 <button className="absolute bottom-0 right-0 p-1.5 bg-blue-600 text-white rounded-full border-2 border-white shadow-sm hover:bg-blue-700">
                   <Camera size={12} />
@@ -102,7 +126,7 @@ const Profile = () => {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-gray-800">{profileData.fullName}</h2>
+                    <h2 className="text-xl font-bold text-gray-800">{profileData.full_name}</h2>
                     {progress === 100 && <CheckCircle size={18} className="text-green-500" />}
                 </div>
                 <p className="text-gray-500 text-sm flex items-center gap-2">
@@ -117,14 +141,15 @@ const Profile = () => {
                 <UserIcon size={16}/> Personal Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <SettingsInput label="Full Name" defaultValue={profileData.fullName} />
-                <SettingsInput label="Email Address" defaultValue={profileData.email} disabled />
-                <SettingsInput label="Phone Number" defaultValue={profileData.phone_number} icon={<Phone size={16}/>} />
-                <SettingsInput label="Date of Birth" type="date" defaultValue={profileData.date_of_birth} icon={<Calendar size={16}/>} />
+                <SettingsInput label="Full Name" value={profileData.full_name} onChange={(e) => setProfileData({...profileData, full_name: e.target.value})} />
+                <SettingsInput label="Email Address" value={profileData.email} disabled />
+                <SettingsInput label="Phone Number" value={profileData.phone_number} onChange={(e) => setProfileData({...profileData, phone_number: e.target.value})} icon={<Phone size={16}/>} />
+                <SettingsInput label="Date of Birth" type="date" value={profileData.date_of_birth} onChange={(e) => setProfileData({...profileData, date_of_birth: e.target.value})} icon={<Calendar size={16}/>} />
                 <SettingsSelect 
                   label="Gender" 
                   options={[{val:'M', lab:'Male'}, {val:'F', lab:'Female'}]} 
-                  defaultValue={profileData.gender} 
+                  value={profileData.gender} 
+                  onChange={(e) => setProfileData({...profileData, gender: e.target.value})}
                 />
               </div>
             </section>
@@ -138,24 +163,29 @@ const Profile = () => {
                 <SettingsSelect 
                   label="Blood Group" 
                   options={['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'UNKNOWN'].map(g => ({val:g, lab:g}))} 
-                  defaultValue={profileData.blood_group} 
+                  value={profileData.blood_group}
+                  onChange={(e) => setProfileData({...profileData, blood_group: e.target.value})}
                 />
                 <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/50 p-4 rounded-xl border border-blue-100">
-                  <SettingsInput label="Emergency Contact Name" placeholder="Full name of contact" defaultValue={profileData.emergency_contact_name} icon={<Users size={16}/>} />
-                  <SettingsInput label="Emergency Contact Phone" placeholder="+254..." defaultValue={profileData.emergency_contact_phone} icon={<Phone size={16}/>} />
+                  <SettingsInput label="Emergency Contact Name" placeholder="Full name of contact" value={profileData.emergency_contact_name} onChange={(e) => setProfileData({...profileData, emergency_contact_name: e.target.value})} icon={<Users size={16}/>} />
+                  <SettingsInput label="Emergency Contact Phone" placeholder="+254..." value={profileData.emergency_contact_phone} onChange={(e) => setProfileData({...profileData, emergency_contact_phone: e.target.value})} icon={<Phone size={16}/>} />
                 </div>
                 <div className="md:col-span-2">
-                  <SettingsTextArea label="Allergies" placeholder="e.g. Penicillin, Nuts (Leave empty if none)" defaultValue={profileData.allergies} />
+                  <SettingsTextArea label="Allergies" placeholder="e.g. Penicillin, Nuts (Leave empty if none)" value={profileData.allergies} onChange={(e) => setProfileData({...profileData, allergies: e.target.value})} />
                 </div>
                 <div className="md:col-span-2">
-                  <SettingsTextArea label="Chronic Conditions" placeholder="e.g. Asthma, Diabetes" defaultValue={profileData.chronic_conditions} />
+                  <SettingsTextArea label="Chronic Conditions" placeholder="e.g. Asthma, Diabetes" value={profileData.chronic_conditions} onChange={(e) => setProfileData({...profileData, chronic_conditions: e.target.value})} />
                 </div>
               </div>
             </section>
 
             <div className="flex justify-end pt-4">
-              <button className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center gap-2">
-                <Save size={18} /> Update Profile
+              <button 
+                onClick={handleUpdate}
+                disabled={loading}
+                className="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 flex items-center gap-2"
+              >
+                {loading ? 'Saving...' : <><Save size={18} /> Update Profile</>}
               </button>
             </div>
           </div>
