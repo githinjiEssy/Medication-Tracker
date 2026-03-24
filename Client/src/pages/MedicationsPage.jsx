@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 
 // --- SUB-COMPONENT: MEDICATION CARD ---
-// Defined here to keep the main component clean and readable
 const MedicationCard = ({ med, onViewDetails, onDelete }) => (
   <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
     <div>
@@ -114,7 +113,7 @@ const MedicationsPage = () => {
   ]);
 
   const handleDelete = (id) => {
-  // Simple confirmation (matches your Cucumber "I confirm" step)
+  
   if (window.confirm("Are you sure you want to delete this medication?")) {
     const updatedList = prescriptions.filter(med => med.id !== id);
     setPrescriptions(updatedList);

@@ -3,17 +3,24 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Heart, User, Lock, Eye, EyeOff, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react'; // Swapped Mail for User
 import { AuthContext } from '../context/AuthContext';
+import Toast from '../components/Toast';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext); // Access login from Context
-  
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' }); // State for toast notifications
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Note: Django LoginView expects 'username' (which can be the email if configured)
+  // Form state
   const [formData, setFormData] = useState({ username: '', password: '' });
+
+  // Function to show toast notifications
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 4000);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,10 +29,11 @@ const LoginPage = () => {
 
     try {
       await login(formData.username, formData.password);
-      // Success is handled inside AuthContext (it navigates to /dashboard)
+      showToast('Logged in successfully!', 'success');
     } catch (err) {
-      console.error("Login Error:", err);
-      setError(err.response?.data?.non_field_errors?.[0] || 'Invalid username or password.');
+      // Extract error message from response or use a default message
+      const errorMsg = err.response?.data?.non_field_errors?.[0] || err.response?.data?.detail || 'Invalid username or password.';
+      showToast(errorMsg, "error");
     } finally {
       setIsLoading(false);
     }
@@ -33,6 +41,12 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col lg:flex-row">
+      <Toast 
+        isVisible={toast.visible} 
+        message={toast.message} 
+        type={toast.type} 
+        onClose={() => setToast({ ...toast, visible: false })} 
+      />
       
       {/* Left Side: Branding */}
       <motion.div 
@@ -164,20 +178,14 @@ const LoginPage = () => {
               whileTap={{ scale: isLoading ? 1 : 0.98 }}
               disabled={isLoading}
               type="submit"
-              className={`w-full py-4 rounded-xl font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-2 group ${
+              className={`w-full py-4 rounded-xl font-bold text-lg shadow-xl transition-all flex items-center justify-center gap-2 ${
                 isLoading 
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
                 : 'bg-teal-600 text-white shadow-teal-100 hover:bg-teal-700'
               }`}
             >
-              {isLoading ? (
-                <Loader2 className="animate-spin" size={20} />
-              ) : (
-                <>
-                  Log In
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
+              {isLoading ? <Loader2 className="animate-spin" size={20} /> : "Log In"}
+              {!isLoading && <ArrowRight size={20} />}
             </motion.button>
           </form>
 
