@@ -100,9 +100,11 @@ class CustomTokenRefreshView(TokenRefreshView):
     serializer_class = TokenRefreshResponseSerializer
 
 
+# views.py
+
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
-    Get or update user profile
+    Get (GET), Update (PUT), or Partially Update (PATCH) the logged-in user profile.
     """
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
@@ -111,18 +113,23 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
     
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop('partial', False) # True if request is PATCH, False if PUT
         instance = self.get_object()
+        
         serializer = UserUpdateSerializer(instance, data=request.data, partial=partial)
         
         if serializer.is_valid():
-            serializer.save()
+            self.perform_update(serializer)
+            
             return Response({
                 'user': UserProfileSerializer(instance).data,
                 'message': 'Profile updated successfully'
             }, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_update(self, serializer):
+        serializer.save()
 
 
 class ChangePasswordView(APIView):
