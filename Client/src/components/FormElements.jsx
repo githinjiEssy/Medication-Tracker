@@ -21,14 +21,14 @@ export const SettingsInput = ({ label, icon, ...props }) => (
   </div>
 );
 
-export const SettingsSelect = ({ label, options, defaultValue, ...props }) => (
+export const SettingsSelect = ({ label, options, value, ...props }) => (
   <div className="space-y-1.5 w-full">
     <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-tight">
       {label}
     </label>
     <select 
       className="w-full p-2.5 border border-gray-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
-      defaultValue={defaultValue}
+      value={value}
       {...props}
     >
       {options.map((opt) => (
