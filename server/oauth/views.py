@@ -100,8 +100,6 @@ class CustomTokenRefreshView(TokenRefreshView):
     serializer_class = TokenRefreshResponseSerializer
 
 
-# views.py
-
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
     Get (GET), Update (PUT), or Partially Update (PATCH) the logged-in user profile.

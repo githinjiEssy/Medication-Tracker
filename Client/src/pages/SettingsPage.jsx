@@ -39,7 +39,7 @@ const Settings = () => {
 
     setIsUpdating(true);
     try {
-      const response = await api.post('change-password/', {
+      const response = await api.post('auth/change-password/', {
         old_password: passwordData.old_password,
         new_password: passwordData.new_password,
         new_password2: passwordData.confirm_password

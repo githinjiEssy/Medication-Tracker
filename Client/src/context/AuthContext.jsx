@@ -9,38 +9,36 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    // Check for existing session on mount
     useEffect(() => {
-        const savedUser = localStorage.getItem('current_user');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
-        }
-        setLoading(false);
+        const initializeAuth = async () => {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                try {
+                    // Attempt to fetch the user's profile to validate the token
+                    const response = await api.get('auth/profile/');
+                    setUser(response.data);
+                } catch (err) {
+                    console.error("Session expired or invalid");
+                    // If the token is invalid or expired, clear local storage and reset user state
+                    localStorage.clear();
+                    setUser(null);
+                }
+            }
+            setLoading(false);
+        };
+        initializeAuth();
     }, []);
 
     const signup = async (userData) => {
         try {
-            // Map frontend names to backend names 
-            const payload = {
-                username: userData.username,
-                email: userData.email,
-                password: userData.password,
-                password2: userData.password2, 
-                first_name: userData.first_name,
-                last_name: userData.last_name,
-                phone_number: userData.phone_number,
-                date_of_birth: userData.date_of_birth,
-                gender: userData.gender === 'Male' ? 'M' : userData.gender === 'Female' ? 'F' : 'O',
-            };
-
-            const response = await api.post('register/', payload); // POST to http://127.0.0.1:8000/api/auth/register/
+            const response = await api.post('auth/register/', payload);
             
-            // Save tokens and user data
-            localStorage.setItem('access_token', response.data.access);
-            localStorage.setItem('refresh_token', response.data.refresh);
-            localStorage.setItem('current_user', JSON.stringify(response.data.user));
+            const { access, refresh, user: newUser } = response.data;
+            localStorage.setItem('access_token', access);
+            localStorage.setItem('refresh_token', refresh);
+            localStorage.setItem('current_user', JSON.stringify(newUser));
             
-            setUser(response.data.user);
+            setUser(newUser);
             navigate('/dashboard');
         } catch (err) {
             throw err.response?.data || { message: 'Signup failed' };
@@ -49,13 +47,14 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (username, password) => {
         try {
-            const response = await api.post('login/', { username, password }); // POST to http://127.0.0.1:8000/api/auth/login/
+            const response = await api.post('auth/login/', { username, password });
             
-            localStorage.setItem('access_token', response.data.access);
-            localStorage.setItem('refresh_token', response.data.refresh);
-            localStorage.setItem('current_user', JSON.stringify(response.data.user));
+            const { access, refresh, user: loggedInUser } = response.data;
+            localStorage.setItem('access_token', access);
+            localStorage.setItem('refresh_token', refresh);
+            localStorage.setItem('current_user', JSON.stringify(loggedInUser));
             
-            setUser(response.data.user);
+            setUser(loggedInUser);
             navigate('/dashboard');
         } catch (err) {
             throw err.response?.data || { message: 'Login failed' };
@@ -63,17 +62,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
+        const refresh = localStorage.getItem('refresh_token');
         try {
-            const refresh = localStorage.getItem('refresh_token');
-            // If the access token is dead, this might fail with a 401
-            await api.post('logout/', { refresh }); 
+            // Standard JWT logout requires blacklisting the refresh token
+            if (refresh) {
+                await api.post('auth/logout/', { refresh });
+            }
         } catch (err) {
-            console.warn("Backend logout failed, but clearing local session anyway.");
+            console.warn("Logout request failed, but clearing local state.");
         } finally {
-            // Clear local session regardless of backend response to ensure user is logged out on frontend
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('current_user');
+            localStorage.clear();
             setUser(null);
             navigate('/login');
         }
@@ -81,12 +79,12 @@ export const AuthProvider = ({ children }) => {
 
     const updateProfile = async (profileData) => {
         try {
-            const response = await api.patch('profile/', profileData); 
+            const response = await api.patch('auth/profile/', profileData); 
+            // Based on your README, the PATCH response returns { user, message }
             const updatedUser = response.data.user;
         
             setUser(updatedUser); 
             localStorage.setItem('current_user', JSON.stringify(updatedUser));
-    
             return updatedUser;
         } catch (err) {
             throw err.response?.data || { message: 'Update failed' };
