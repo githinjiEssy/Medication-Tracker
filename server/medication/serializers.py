@@ -92,6 +92,7 @@ class MedicationListSerializer(serializers.ModelSerializer):
     """
     Serializer for Medication list view
     """
+    next_occurrence = serializers.SerializerMethodField()
     frequency_display = serializers.CharField(
         source='get_frequency_display',
         read_only=True
@@ -111,9 +112,33 @@ class MedicationListSerializer(serializers.ModelSerializer):
             'frequency', 'frequency_display', 'route',
             'start_date', 'end_date', 'status', 'status_display',
             'is_active', 'refills_remaining', 'prescribed_by',
-            'schedule_count', 'adherence_rate', 'created_at'
+            'schedule_count', 'adherence_rate', 'created_at', 
+            'next_occurrence'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_next_occurrence(self, obj):
+        now = timezone.now()
+        current_time_str = now.strftime('%H:%M')
+
+        # 1. Look for an actual planned intake record first
+        next_intake = obj.intakes.filter(
+            status='MISSED',
+            scheduled_time__gt=now
+        ).order_by('scheduled_time').first()
+
+        if next_intake:
+            return next_intake.scheduled_time.strftime('%H:%M')
+
+        # 2. FALLBACK: Look at the raw 'specific_times' list (The red circle in your DB)
+        if obj.specific_times and len(obj.specific_times) > 0:
+            # Find the first time in your list that is later than "now"
+            upcoming = [t for t in obj.specific_times if t > current_time_str]
+            if upcoming:
+                return min(upcoming)
+            return obj.specific_times[0] # If all passed today, show the first one for tomorrow
+                
+        return None
     
     def get_schedule_count(self, obj):
         return obj.schedules.filter(is_active=True).count()
