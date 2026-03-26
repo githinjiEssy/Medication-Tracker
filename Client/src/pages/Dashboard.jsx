@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { medicationService } from '../services/medicationService';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import AddMedicationModal from '../components/AddMedicationModal';
@@ -18,15 +19,53 @@ import {
 const Dashboard = () => {
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
   const [isSymptomModalOpen, setIsSymptomModalOpen] = useState(false);
+  const [dailySchedule, setDailySchedule] = useState([]);
+  const [stats, setStats] = useState({});
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
+  // Fetch dashboard data on component mount
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [intakesRes, dashboardRes] = await Promise.all([
+        medicationService.getTodayIntakes(),
+        medicationService.getDashboard()
+      ]);
+      setDailySchedule(intakesRes.data);
+      setStats(dashboardRes.data);
+    } catch (err) {
+      console.error("Error fetching dashboard data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // Handler for marking a dose as taken
+  const handleMarkTaken = async (intakeId) => {
+    try {
+      await medicationService.markAsTaken(intakeId, { 
+        status: 'taken', 
+        taken_at: new Date().toISOString() 
+      });
+      // Refresh data to show updated state
+      fetchDashboardData();
+    } catch (err) {
+      alert("Failed to log dose");
+    }
+  };
+
   // Mock data for today's tasks
-  const dailySchedule = [
-    { id: 1, name: 'Lisinopril', time: '08:00 AM', taken: true, dose: '10mg' },
-    { id: 2, name: 'Metformin', time: '12:00 PM', taken: false, dose: '500mg' },
-    { id: 3, name: 'Metformin', time: '08:00 PM', taken: false, dose: '500mg' },
-  ];
+  // const dailySchedule = [
+  //   { id: 1, name: 'Lisinopril', time: '08:00 AM', taken: true, dose: '10mg' },
+  //   { id: 2, name: 'Metformin', time: '12:00 PM', taken: false, dose: '500mg' },
+  //   { id: 3, name: 'Metformin', time: '08:00 PM', taken: false, dose: '500mg' },
+  // ];
 
   // Mock User Data
   const userData = {
@@ -51,6 +90,8 @@ const Dashboard = () => {
   };
 
   const profileStrength = calculateStrength();
+
+  if (loading) return <div className="p-20 text-center font-bold">Loading your health data...</div>;
 
   return (
     <div className="flex min-h-screen bg-[#f8fafb]">
@@ -84,24 +125,33 @@ const Dashboard = () => {
               </div>
 
               <div className="space-y-4">
-                {dailySchedule.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-5 rounded-3xl bg-slate-50 border border-slate-100 group hover:border-teal-500/30 transition-all">
+                {dailySchedule.length > 0 ? dailySchedule.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-5 rounded-3xl bg-slate-50 border border-slate-100 group transition-all">
                     <div className="flex items-center gap-5">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.taken ? 'bg-teal-100 text-teal-600' : 'bg-white text-slate-400 border border-slate-200'}`}>
-                        {item.taken ? <CheckCircle2 size={24} /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.status === 'taken' ? 'bg-teal-100 text-teal-600' : 'bg-white text-slate-400 border border-slate-200'}`}>
+                        {item.status === 'taken' ? <CheckCircle2 size={24} /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
                       </div>
                       <div>
-                        <p className={`font-bold ${item.taken ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{item.name}</p>
-                        <p className="text-xs font-medium text-slate-500">{item.time} • {item.dose}</p>
+                        <p className={`font-bold ${item.status === 'taken' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                          {item.medication_name}
+                        </p>
+                        <p className="text-xs font-medium text-slate-500">
+                          {item.scheduled_time} • {item.dosage_override || 'Standard Dose'}
+                        </p>
                       </div>
                     </div>
-                    {!item.taken && (
-                      <button className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-teal-600 hover:text-white hover:border-teal-600 transition-all">
+                    {item.status !== 'taken' && (
+                      <button 
+                        onClick={() => handleMarkTaken(item.id)}
+                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-teal-600 hover:text-white transition-all"
+                      >
                         Log Dose
                       </button>
                     )}
                   </div>
-                ))}
+                )) : (
+                  <p className="text-slate-400 italic text-center py-4">No medications scheduled for today.</p>
+                )}
               </div>
             </section>
 
