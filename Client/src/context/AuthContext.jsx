@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
 
     const signup = async (userData) => {
         try {
-            const response = await api.post('auth/register/', payload);
+            const response = await api.post('auth/register/', userData);
             
             const { access, refresh, user: newUser } = response.data;
             localStorage.setItem('access_token', access);
