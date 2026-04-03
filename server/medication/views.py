@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db.models import Q, Count, Avg
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, time
 from .models import (
     Medication, MedicationSchedule, MedicationIntake,
     MedicationComment, MedicationReminder
@@ -48,6 +48,55 @@ class MedicationViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'generic_name', 'reason', 'prescribed_by']
     ordering_fields = ['created_at', 'start_date', 'name']
     ordering = ['-created_at']
+
+    def perform_create(self, serializer):
+        medication = serializer.save()
+        self._sync_specific_times_to_schedule(medication)
+
+    def perform_update(self, serializer):
+        medication = serializer.save()
+        # Clean up future missed intakes to prevent duplicates if times changed
+        MedicationIntake.objects.filter(
+            medication=medication,
+            scheduled_time__gte=timezone.now(),
+            status='MISSED'
+        ).delete()
+        
+        self._sync_specific_times_to_schedule(medication)
+
+    def _sync_specific_times_to_schedule(self, medication):
+        if medication.frequency != 'SPECIFIC' or not medication.specific_times:
+            return
+
+        for time_str in medication.specific_times:
+            try:
+                # FIX: Convert the string "HH:MM" into a Python time object
+                # This ensures the database TimeField accepts the value
+                if isinstance(time_str, str):
+                    parsed_time = datetime.strptime(time_str, "%H:%M").time()
+                else:
+                    parsed_time = time_str
+
+                # Step 2: Create the MedicationSchedule record
+                schedule, created = MedicationSchedule.objects.get_or_create(
+                    medication=medication,
+                    scheduled_time=parsed_time, # Use the parsed object here
+                    defaults={'dosage': medication.dosage, 'is_active': True}
+                )
+
+                # Step 3: Generate the 30-day calendar
+                existing_intakes = MedicationIntake.objects.filter(
+                    medication=medication,
+                    scheduled_time__date__gte=date.today()
+                ).exists()
+
+                if created or not existing_intakes:self._create_future_intakes(medication, schedule)
+                
+            except Exception as e:
+                print(f"Error syncing schedule for {time_str}: {e}")
+
+    
+    # ============original code===============
     
     def get_queryset(self):
         """
@@ -94,6 +143,16 @@ class MedicationViewSet(viewsets.ModelViewSet):
         elif self.action in ['create', 'update', 'partial_update']:
             return MedicationCreateUpdateSerializer
         return MedicationListSerializer
+
+    @action(detail=True, methods=['post'])
+    def sync_existing(self, request, pk=None):
+        """
+        Manually trigger a sync for an existing medication 
+        that has specific_times but no database schedules.
+        """
+        medication = self.get_object()
+        self._sync_specific_times_to_schedule(medication)
+        return Response({'status': 'Schedule synced successfully'})
     
     @action(detail=True, methods=['get'])
     def schedules(self, request, pk=None):
@@ -219,24 +278,45 @@ class MedicationViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             # Find or create intake for current time
+            intake_id = request.data.get('intake_id')
             now = timezone.now()
-            scheduled_time = now.replace(second=0, microsecond=0)
-            
-            intake, created = MedicationIntake.objects.get_or_create(
-                medication=medication,
-                scheduled_time=scheduled_time,
-                defaults={
-                    'status': 'TAKEN',
-                    'taken_at': serializer.validated_data.get('taken_at', now),
-                    'dosage_taken': serializer.validated_data.get('dosage_taken', medication.dosage)
-                }
-            )
-            
-            if not created:
+            # scheduled_time = now.replace(second=0, microsecond=0)
+
+            # Use data from serializer, fallback to 'now' or medication defaults
+            taken_at = serializer.validated_data.get('taken_at', now)
+            dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
+
+            if intake_id:
+                # TARGETED LOGGING: Update the exact slot the user clicked (e.g., the 7:00 AM slot)
+                intake = get_object_or_404(MedicationIntake, id=intake_id, medication=medication)
                 intake.status = 'TAKEN'
                 intake.taken_at = serializer.validated_data.get('taken_at', now)
                 intake.dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
                 intake.save()
+            else:
+                # DEFAULT LOGGING: If no specific slot, log for the current time (rounding to nearest minute)
+                scheduled_time = now.replace(second=0, microsecond=0)
+                intake, created = MedicationIntake.objects.get_or_create(
+                    medication=medication,
+                    scheduled_time=scheduled_time,
+                    defaults={
+                        'status': 'TAKEN',
+                        'taken_at': serializer.validated_data.get('taken_at', now),
+                        'dosage_taken': serializer.validated_data.get('dosage_taken', medication.dosage)
+                    }
+                )
+
+                if not created:
+                    intake.status = 'TAKEN'
+                    intake.taken_at = taken_at
+                    intake.dosage_taken = dosage_taken
+                    intake.save()
+            
+            # if not created:
+            #     intake.status = 'TAKEN'
+            #     intake.taken_at = serializer.validated_data.get('taken_at', now)
+            #     intake.dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
+            #     intake.save()
             
             # Add comment if notes provided
             if serializer.validated_data.get('notes'):
@@ -432,6 +512,22 @@ class IntakeViewSet(viewsets.ModelViewSet):
                 MedicationCommentSerializer(comment).data,
                 status=status.HTTP_201_CREATED
             )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Explicitly handle the PATCH request to update status/taken_at
+        """
+        instance = self.get_object()
+        
+        # Log for debugging - check your terminal to see if this triggers
+        print(f"DEBUG: Updating Intake ID {instance.id}. Data: {request.data}")
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

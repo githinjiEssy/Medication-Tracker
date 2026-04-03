@@ -73,11 +73,11 @@ class MedicationIntakeSerializer(serializers.ModelSerializer):
     class Meta:
         model = MedicationIntake
         fields = [
-            'id', 'scheduled_time', 'scheduled_time_formatted',
+            'id', 'medication', 'scheduled_time', 'scheduled_time_formatted',
             'taken_at', 'taken_at_formatted', 'status', 'status_display',
             'dosage_taken', 'created_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at']
     
     def get_scheduled_time_formatted(self, obj):
         return obj.scheduled_time.strftime('%Y-%m-%d %I:%M %p')
