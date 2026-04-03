@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Medication, MedicationSchedule, MedicationIntake,
-    MedicationComment, MedicationReminder
+    MedicationComment, MedicationReminder, Notification
 )
 
 
@@ -80,3 +80,15 @@ class MedicationReminderAdmin(admin.ModelAdmin):
     list_display = ['medication', 'reminder_time', 'is_sent', 'sent_at']
     list_filter = ['is_sent', 'reminder_time']
     search_fields = ['medication__name']
+    
+    
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    # This tells the admin panel which columns to display
+    list_display = ('patient', 'title', 'medication', 'is_read', 'created_at')
+    
+    # This adds a filter sidebar so you can sort by read/unread
+    list_filter = ('is_read', 'created_at')
+    
+    # This adds a search bar at the top
+    search_fields = ('patient__username', 'title', 'message')
