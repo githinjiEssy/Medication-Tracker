@@ -1,12 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
+from .views import NotificationViewSet
 
 router = DefaultRouter()
 router.register(r'medications', views.MedicationViewSet, basename='medication')
 router.register(r'schedules', views.ScheduleViewSet, basename='schedule')
 router.register(r'intakes', views.IntakeViewSet, basename='intake')
 router.register(r'comments', views.CommentViewSet, basename='comment')
+router.register(r'notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
     # Dashboard and statistics

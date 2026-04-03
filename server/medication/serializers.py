@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import datetime, date
 from .models import (
     Medication, MedicationSchedule, MedicationIntake,
-    MedicationComment, MedicationReminder
+    MedicationComment, MedicationReminder, Notification
 )
 
 
@@ -347,3 +347,11 @@ class AdherenceStatsSerializer(serializers.Serializer):
     total_missed = serializers.IntegerField()
     adherence_rate = serializers.FloatField()
     daily_trend = serializers.ListField()
+    
+    
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'title', 'message', 'is_read', 'created_at', 'medication']
+        read_only_fields = ['id', 'created_at']
+        

@@ -422,3 +422,30 @@ class MedicationReminder(models.Model):
     
     def __str__(self):
         return f"Reminder for {self.medication.name} at {self.reminder_time}"
+    
+    
+class Notification(models.Model):
+    """
+    Model for storing in-app notifications for patients
+    """
+    patient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications'
+    )
+    medication = models.ForeignKey(
+        Medication,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"Notification for {self.patient.username}: {self.title}"

@@ -691,3 +691,58 @@ class UpcomingIntakesView(generics.ListAPIView):
             scheduled_time__lt=timezone.now() + timedelta(hours=hours),
             status='MISSED'
         ).select_related('medication').order_by('scheduled_time')
+        
+from .models import Notification
+from .serializers import NotificationSerializer
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for fetching and reading in-app notifications
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = NotificationSerializer
+    
+    def get_queryset(self):
+        # Only return notifications for the currently logged-in user
+        return Notification.objects.filter(patient=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        """Mark a single notification as read"""
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({'status': 'marked as read'})
+    
+    def perform_create(self, serializer):
+        # 1. Save the new medication
+        medication = serializer.save()
+        
+        # 2. Automatically generate Intakes and Reminders based on specific_times
+        if medication.specific_times:
+            start = max(medication.start_date, date.today())
+            end = medication.end_date or (date.today() + timedelta(days=30))
+            end = min(end, date.today() + timedelta(days=30))
+            
+            curr = start
+            while curr <= end:
+                for time_str in medication.specific_times:
+                    hour, minute = map(int, time_str.split(':'))
+                    dt = datetime.combine(curr, datetime.min.time()).replace(hour=hour, minute=minute)
+                    dt = timezone.make_aware(dt)
+                    
+                    # Only schedule future reminders
+                    if dt >= timezone.now() - timedelta(minutes=5):
+                        # Create the Intake (So it shows up on your React Dashboard)
+                        MedicationIntake.objects.get_or_create(
+                            medication=medication,
+                            scheduled_time=dt,
+                            defaults={'status': 'MISSED', 'dosage_taken': medication.dosage}
+                        )
+                        # Create the Reminder (So Celery can find it and send a Notification)
+                        MedicationReminder.objects.get_or_create(
+                            medication=medication,
+                            reminder_time=dt,
+                            defaults={'is_sent': False}
+                        )
+                curr += timedelta(days=1)
