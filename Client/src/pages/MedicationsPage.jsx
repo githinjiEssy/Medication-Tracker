@@ -147,6 +147,24 @@ const MedicationsPage = () => {
     med.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const recentActivity = selectedMed?.intakes 
+  ? [...selectedMed.intakes]
+      .filter(intake => {
+        const isValidStatus = intake.status === 'TAKEN' || intake.status === 'MISSED';
+        
+        // Calculate "6 days ago" starting from 00:00:00
+        const now = new Date();
+        const sixDaysAgo = new Date();
+        sixDaysAgo.setDate(now.getDate() - 6);
+        sixDaysAgo.setHours(0, 0, 0, 0); // Include the full day from the start
+        
+        const intakeDate = new Date(intake.taken_at || intake.scheduled_time);
+        
+        return isValidStatus && intakeDate >= sixDaysAgo && intakeDate <= now;
+      }) 
+      .sort((a, b) => new Date(b.taken_at || b.scheduled_time) - new Date(a.taken_at || a.scheduled_time))
+  : [];
+
   return (
     <div className="flex min-h-screen bg-[#f8fafb]">
       {/* Toast notification */}
@@ -263,23 +281,56 @@ const MedicationsPage = () => {
                         <History className="text-teal-600" /> Recent Activity
                       </h3>
                       <div className="space-y-4">
-                        {selectedMed.recent_intakes?.length > 0 ? (
-                          selectedMed.recent_intakes.map((intake, i) => (
-                            <div key={i} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                  <CheckCircle2 size={20}/>
+
+                        {recentActivity.length > 0 ? (
+                          recentActivity.map((intake, i) => {
+                            const isTaken = intake.status === 'TAKEN';
+
+                            return (
+                              <div key={intake.id || i} className="flex items-center justify-between p-5 bg-slate-50 rounded-2xl">
+                                <div className="flex items-center gap-4">
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                    isTaken ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'
+                                  }`}>
+                                    {isTaken ? <CheckCircle2 size={20}/> : <Clock size={20}/>}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-slate-800">
+                                      {isTaken ? "Medication logged successfully" : "Dose Missed"}
+                                    </p>
+                                    <p className="text-xs text-slate-400 font-medium">
+                                      {(() => {
+                                        const dateObj = new Date(intake.taken_at || intake.scheduled_time);
+                                        return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + 
+                                              dateObj.toLocaleTimeString('en-US', { 
+                                                hour: '2-digit', 
+                                                minute: '2-digit', 
+                                                hour12: true,
+                                                timeZone: 'UTC' 
+                                              });
+                                      })()}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="font-bold text-slate-800">Dose Taken</p>
-                                  <p className="text-xs text-slate-400">{new Date(intake.taken_at).toLocaleString()}</p>
+
+                                <div className="flex items-center gap-2">
+                                  {isTaken ? (
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-teal-600 bg-teal-50 px-2 py-1 rounded-md border border-teal-100">
+                                      {intake.dosage_taken || selectedMed.dosage_strength + " " + selectedMed.dosage_unit}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">
+                                      Skipped
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                        })
                         ) : (
                           <p className="text-slate-400 text-sm italic">No intake logs found yet.</p>
                         )}
+
                       </div>
                     </div>
                   </div>

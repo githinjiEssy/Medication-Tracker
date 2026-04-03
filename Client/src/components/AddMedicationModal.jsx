@@ -34,7 +34,7 @@ const AddMedicationModal = ({ isOpen, onClose, onSuccess }) => {
     prescribed_date: new Date().toISOString().split('T')[0],
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
-    specific_times: [], // Logic for this can be added as tags/chips
+    specific_times: [], 
     prescribed_by: '',
     prescription_number: '',
     pharmacy_name: '',
@@ -57,6 +57,7 @@ const AddMedicationModal = ({ isOpen, onClose, onSuccess }) => {
     try {
       const payload = {
         ...formData,
+        frequency: specificTimes.length > 0 ? 'SPECIFIC' : formData.frequency,
         specific_times: specificTimes, // Sending the array from our local state
         end_date: isOngoing ? null : (formData.end_date || null),
         refills_remaining: parseInt(formData.refills_remaining) || 0,
