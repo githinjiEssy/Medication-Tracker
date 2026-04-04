@@ -123,7 +123,7 @@ class MedicationListSerializer(serializers.ModelSerializer):
 
         # 1. Look for an actual planned intake record first
         next_intake = obj.intakes.filter(
-            status='MISSED',
+            status='PENDING',
             scheduled_time__gt=now
         ).order_by('scheduled_time').first()
 
@@ -333,6 +333,7 @@ class IntakeMarkTakenSerializer(serializers.Serializer):
     """
     Serializer for marking intake as taken
     """
+    status = serializers.ChoiceField(choices=['TAKEN', 'MISSED', 'LATE', 'PENDING'], default='TAKEN')
     taken_at = serializers.DateTimeField(required=False)
     dosage_taken = serializers.CharField(required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
@@ -342,9 +343,10 @@ class AdherenceStatsSerializer(serializers.Serializer):
     """
     Serializer for adherence statistics
     """
-    total_scheduled = serializers.IntegerField()
+    total_evaluated = serializers.IntegerField()
     total_taken = serializers.IntegerField()
     total_missed = serializers.IntegerField()
+    total_late = serializers.IntegerField()
     adherence_rate = serializers.FloatField()
     daily_trend = serializers.ListField()
     

@@ -59,7 +59,7 @@ class MedicationViewSet(viewsets.ModelViewSet):
         MedicationIntake.objects.filter(
             medication=medication,
             scheduled_time__gte=timezone.now(),
-            status='MISSED'
+            status__in=['PENDING', 'MISSED']
         ).delete()
         
         self._sync_specific_times_to_schedule(medication)
@@ -282,6 +282,9 @@ class MedicationViewSet(viewsets.ModelViewSet):
             now = timezone.now()
             # scheduled_time = now.replace(second=0, microsecond=0)
 
+            # Use the status from the serializer, which allows for more flexible logging (e.g., marking as MISSED or LATE if needed)
+            new_status = serializer.validated_data.get('status')
+
             # Use data from serializer, fallback to 'now' or medication defaults
             taken_at = serializer.validated_data.get('taken_at', now)
             dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
@@ -289,7 +292,7 @@ class MedicationViewSet(viewsets.ModelViewSet):
             if intake_id:
                 # TARGETED LOGGING: Update the exact slot the user clicked (e.g., the 7:00 AM slot)
                 intake = get_object_or_404(MedicationIntake, id=intake_id, medication=medication)
-                intake.status = 'TAKEN'
+                intake.status = new_status
                 intake.taken_at = serializer.validated_data.get('taken_at', now)
                 intake.dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
                 intake.save()
@@ -311,12 +314,6 @@ class MedicationViewSet(viewsets.ModelViewSet):
                     intake.taken_at = taken_at
                     intake.dosage_taken = dosage_taken
                     intake.save()
-            
-            # if not created:
-            #     intake.status = 'TAKEN'
-            #     intake.taken_at = serializer.validated_data.get('taken_at', now)
-            #     intake.dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
-            #     intake.save()
             
             # Add comment if notes provided
             if serializer.validated_data.get('notes'):
@@ -342,11 +339,15 @@ class MedicationViewSet(viewsets.ModelViewSet):
         days = int(request.query_params.get('days', 30))
         start_date = timezone.now() - timedelta(days=days)
         
+        # filter intakes
         intakes = medication.intakes.filter(scheduled_time__gte=start_date)
         
-        total = intakes.count()
+        # Calculate overall stats
         taken = intakes.filter(status='TAKEN').count()
         missed = intakes.filter(status='MISSED').count()
+        late = intakes.filter(status='LATE').count()
+
+        total_evaluated = taken + late + missed
         
         # Calculate daily trend
         trend = []
@@ -356,20 +357,25 @@ class MedicationViewSet(viewsets.ModelViewSet):
                 scheduled_time__date=day.date()
             )
             day_taken = day_intakes.filter(status='TAKEN').count()
-            day_total = day_intakes.count()
+            day_missed = day_intakes.filter(status='MISSED').count()
+            day_late = day_intakes.filter(status='LATE').count()
+            day_total = day_taken + day_late + day_missed
             
             trend.append({
                 'date': day.date(),
                 'taken': day_taken,
                 'total': day_total,
-                'rate': round((day_taken / day_total * 100) if day_total > 0 else 0, 2)
+                'missed': day_missed,
+                'late': day_late,
+                'rate': round(((day_taken + day_late) / day_total * 100) if day_total > 0 else 0, 2)
             })
         
         stats = {
-            'total_scheduled': total,
+            'total_scheduled': total_evaluated,
             'total_taken': taken,
             'total_missed': missed,
-            'adherence_rate': round((taken / total * 100) if total > 0 else 0, 2),
+            'total_late': late,
+            'adherence_rate': round(((taken + late) / total_evaluated * 100) if total_evaluated > 0 else 0, 2),
             'daily_trend': trend
         }
         
@@ -400,7 +406,7 @@ class MedicationViewSet(viewsets.ModelViewSet):
                     medication=medication,
                     scheduled_time=scheduled_datetime,
                     defaults={
-                        'status': 'MISSED',
+                        'status': 'PENDING',
                         'dosage_taken': schedule.dosage
                     }
                 )
@@ -447,7 +453,7 @@ class ScheduleViewSet(viewsets.ModelViewSet):
         future_intakes = MedicationIntake.objects.filter(
             medication=instance.medication,
             scheduled_time__gte=timezone.now(),
-            status='MISSED'
+            status='PENDING'
         )
         future_intakes.delete()
         instance.delete()
@@ -460,7 +466,7 @@ class ScheduleViewSet(viewsets.ModelViewSet):
         future_intakes = MedicationIntake.objects.filter(
             medication=schedule.medication,
             scheduled_time__gte=timezone.now(),
-            status='MISSED'
+            status='PENDING'
         )
         future_intakes.delete()
         
@@ -585,14 +591,16 @@ class DashboardView(generics.GenericAPIView):
         
         taken_count = today_intakes.filter(status='TAKEN').count()
         total_count = today_intakes.count()
-        pending_count = today_intakes.filter(status='MISSED').count()
+        pending_count = today_intakes.filter(status='PENDING').count()
+        missed_count = today_intakes.filter(status='MISSED').count()
+        late_count = today_intakes.filter(status='LATE').count()
         
         # Get upcoming intakes (next 24 hours)
         upcoming = MedicationIntake.objects.filter(
             medication__patient=user,
             scheduled_time__gt=timezone.now(),
             scheduled_time__lt=timezone.now() + timedelta(days=1),
-            status='MISSED'
+            status='PENDING'
         ).select_related('medication')[:10]
         
         # Get recent comments
@@ -626,6 +634,8 @@ class DashboardView(generics.GenericAPIView):
                     'total': total_count,
                     'taken': taken_count,
                     'pending': pending_count,
+                    'missed': missed_count,
+                    'late': late_count,
                     'completion_rate': round((taken_count / total_count * 100) if total_count > 0 else 0, 2)
                 },
                 'overall_adherence_7d': adherence_rate
@@ -672,6 +682,7 @@ class StatisticsView(generics.GenericAPIView):
         total_intakes = intakes.count()
         taken_intakes = intakes.filter(status='TAKEN').count()
         missed_intakes = intakes.filter(status='MISSED').count()
+        pending_intakes = intakes.filter(status='PENDING').count()
         
         # Adherence by medication
         adherence_by_med = []
@@ -714,6 +725,7 @@ class StatisticsView(generics.GenericAPIView):
                 'total': total_intakes,
                 'taken': taken_intakes,
                 'missed': missed_intakes,
+                'pending': pending_intakes,
                 'adherence_rate': round((taken_intakes / total_intakes * 100) if total_intakes > 0 else 0, 2)
             },
             'adherence_by_medication': adherence_by_med,
@@ -733,41 +745,93 @@ class StatisticsView(generics.GenericAPIView):
         return Response(response_data)
 
 
-class TodayIntakesView(generics.ListAPIView):
+class DailyIntakeView(generics.ListAPIView):
     """
-    Get today's intakes
+    Get intakes for a specific date (defaults to today)
     """
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = MedicationIntakeSerializer
     
     def get_queryset(self):
         user = self.request.user
-        today = date.today()
-        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
-        today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
+        # Grab date from query params, default to today
+        date_param = self.request.query_params.get('date')
+        
+        try:
+            if date_param:
+                target_date = datetime.strptime(date_param, '%Y-%m-%d').date()
+            else:
+                target_date = date.today()
+        except ValueError:
+            target_date = date.today()
+
+        # Create time-aware range for the full 24-hour period
+        day_start = timezone.make_aware(datetime.combine(target_date, time.min))
+        day_end = timezone.make_aware(datetime.combine(target_date, time.max))
         
         return MedicationIntake.objects.filter(
             medication__patient=user,
-            scheduled_time__range=[today_start, today_end]
+            scheduled_time__range=[day_start, day_end]
         ).select_related('medication').order_by('scheduled_time')
     
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         
-        # Group by status
+        # Calculate stats for the specific day
         taken = queryset.filter(status='TAKEN')
-        pending = queryset.filter(status='MISSED')
+        # Note: Use exclude(status='TAKEN') to capture both PENDING and MISSED
+        pending = queryset.exclude(status='TAKEN')
         
         serializer = self.get_serializer(queryset, many=True)
         
+        # Determine the date used for the response header
+        date_param = self.request.query_params.get('date')
+        resp_date = date_param if date_param else date.today()
+        
         return Response({
-            'date': date.today(),
+            'date': resp_date,
             'total': queryset.count(),
             'taken': taken.count(),
             'pending': pending.count(),
             'completion_rate': round((taken.count() / queryset.count() * 100) if queryset.exists() else 0, 2),
             'intakes': serializer.data
         })
+
+# class TodayIntakesView(generics.ListAPIView):
+#     """
+#     Get today's intakes
+#     """
+#     permission_classes = [permissions.IsAuthenticated]
+#     serializer_class = MedicationIntakeSerializer
+    
+#     def get_queryset(self):
+#         user = self.request.user
+#         today = date.today()
+#         today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+#         today_end = timezone.make_aware(datetime.combine(today, datetime.max.time()))
+        
+#         return MedicationIntake.objects.filter(
+#             medication__patient=user,
+#             scheduled_time__range=[today_start, today_end]
+#         ).select_related('medication').order_by('scheduled_time')
+    
+#     def list(self, request, *args, **kwargs):
+#         queryset = self.get_queryset()
+        
+#         # Group by status
+#         taken = queryset.filter(status='TAKEN')
+#         pending = queryset.filter(status='MISSED')
+        
+#         serializer = self.get_serializer(queryset, many=True)
+        
+#         return Response({
+#             'date': date.today(),
+#             'total': queryset.count(),
+#             'taken': taken.count(),
+#             'pending': pending.count(),
+#             'completion_rate': round((taken.count() / queryset.count() * 100) if queryset.exists() else 0, 2),
+#             'intakes': serializer.data
+#         })
 
 
 class UpcomingIntakesView(generics.ListAPIView):
@@ -785,7 +849,7 @@ class UpcomingIntakesView(generics.ListAPIView):
             medication__patient=user,
             scheduled_time__gt=timezone.now(),
             scheduled_time__lt=timezone.now() + timedelta(hours=hours),
-            status='MISSED'
+            status='PENDING'
         ).select_related('medication').order_by('scheduled_time')
         
 from .models import Notification
@@ -833,7 +897,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
                         MedicationIntake.objects.get_or_create(
                             medication=medication,
                             scheduled_time=dt,
-                            defaults={'status': 'MISSED', 'dosage_taken': medication.dosage}
+                            defaults={'status': 'PENDING', 'dosage_taken': medication.dosage}
                         )
                         # Create the Reminder (So Celery can find it and send a Notification)
                         MedicationReminder.objects.get_or_create(

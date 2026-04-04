@@ -273,9 +273,9 @@ class MedicationIntake(models.Model):
     Model for tracking actual medication intake
     """
     STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
         ('TAKEN', 'Taken'),
         ('MISSED', 'Missed'),
-        ('SKIPPED', 'Skipped'),
         ('LATE', 'Late'),
     ]
     
@@ -306,7 +306,7 @@ class MedicationIntake(models.Model):
     status = models.CharField(
         max_length=10,
         choices=STATUS_CHOICES,
-        default='MISSED'
+        default='PENDING',
     )
     
     dosage_taken = models.CharField(

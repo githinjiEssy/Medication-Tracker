@@ -14,7 +14,7 @@ urlpatterns = [
     # Dashboard and statistics
     path('dashboard/', views.DashboardView.as_view(), name='medication_dashboard'),
     path('statistics/', views.StatisticsView.as_view(), name='medication_statistics'),
-    path('today/', views.TodayIntakesView.as_view(), name='today_intakes'),
+    path('daily/', views.DailyIntakeView.as_view(), name='daily_intakes'),
     path('upcoming/', views.UpcomingIntakesView.as_view(), name='upcoming_intakes'),
     
     # Include router URLs

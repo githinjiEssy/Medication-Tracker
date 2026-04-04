@@ -8,6 +8,9 @@ export const scheduleService = {
     // 2. Get Intakes for a Specific Date (GET /api/medications/intakes/?date=YYYY-MM-DD)
     getIntakesByDate: (date) => api.get('medications/intakes/', { params: { date } }),
 
+    // 2. Get Daily Intakes (GET /api/medications/daily/)
+    getDailyIntakes: () => api.get('medications/daily/', {params: {}}),
+
     // 3. Get Upcoming Intakes (GET /api/medications/upcoming/?hours=24)
     getUpcomingIntakes: (hours = 24) => api.get('medications/upcoming/', { params: { hours } }),
 
