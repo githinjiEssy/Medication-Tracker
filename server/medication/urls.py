@@ -1,22 +1,28 @@
+# urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
-from .views import NotificationViewSet
+from .views import (
+    MedicationViewSet, ScheduleViewSet, IntakeViewSet, CommentViewSet,
+    DashboardView, StatisticsView, DailyIntakeView, UpcomingIntakesView,
+    NotificationViewSet
+)
 
 router = DefaultRouter()
-router.register(r'medications', views.MedicationViewSet, basename='medication')
-router.register(r'schedules', views.ScheduleViewSet, basename='schedule')
-router.register(r'intakes', views.IntakeViewSet, basename='intake')
-router.register(r'comments', views.CommentViewSet, basename='comment')
+router.register(r'medications', MedicationViewSet, basename='medication')
+router.register(r'schedules', ScheduleViewSet, basename='schedule')
+router.register(r'intakes', IntakeViewSet, basename='intake')
+router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
-    # Dashboard and statistics
-    path('dashboard/', views.DashboardView.as_view(), name='medication_dashboard'),
-    path('statistics/', views.StatisticsView.as_view(), name='medication_statistics'),
-    path('daily/', views.DailyIntakeView.as_view(), name='daily_intakes'),
-    path('upcoming/', views.UpcomingIntakesView.as_view(), name='upcoming_intakes'),
-    
-    # Include router URLs
     path('', include(router.urls)),
+    
+    # Dashboard and Statistics
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('statistics/', StatisticsView.as_view(), name='statistics'),
+    
+    # Daily and Upcoming Intakes
+    path('daily-intakes/', DailyIntakeView.as_view(), name='daily-intakes'),
+    path('today/', DailyIntakeView.as_view(), name='today-intakes'),  # Same view, defaults to today
+    path('upcoming-intakes/', UpcomingIntakesView.as_view(), name='upcoming-intakes'),
 ]
