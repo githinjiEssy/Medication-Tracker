@@ -182,7 +182,7 @@ const SchedulePage = () => {
                                 onChange={(e) => handleUpdateStatus(item.id, e.target.value)}
                                 className="appearance-none pl-4 pr-10 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all cursor-pointer outline-none border-none shadow-lg shadow-slate-900/20"
                               >
-                                <option value="PENDING">Update Status</option>
+                                <option value="PENDING">Log dosage</option>
                                 <option value="TAKEN">Log: Taken</option>
                                 <option value="MISSED">Log: Missed</option>
                                 <option value="LATE">Log: Late</option>

@@ -640,6 +640,7 @@ class DashboardView(generics.GenericAPIView):
                 },
                 'overall_adherence_7d': adherence_rate
             },
+            'today_intakes_list': MedicationIntakeSerializer(today_intakes, many=True).data,
             'upcoming_intakes': MedicationIntakeSerializer(upcoming, many=True).data,
             'recent_comments': MedicationCommentSerializer(recent_comments, many=True).data,
             'low_refills': MedicationListSerializer(low_refills, many=True).data

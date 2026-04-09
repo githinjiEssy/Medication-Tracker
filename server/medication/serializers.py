@@ -73,11 +73,12 @@ class MedicationIntakeSerializer(serializers.ModelSerializer):
     scheduled_time_formatted = serializers.SerializerMethodField()
     taken_at_formatted = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    medication_name = serializers.CharField(source='medication.name', read_only=True) # Added medication name for easier display in intake logs
     
     class Meta:
         model = MedicationIntake
         fields = [
-            'id', 'medication', 'scheduled_time', 'scheduled_time_formatted',
+            'id', 'medication', 'medication_name', 'scheduled_time', 'scheduled_time_formatted',
             'taken_at', 'taken_at_formatted', 'status', 'status_display',
             'dosage_taken', 'created_at'
         ]
