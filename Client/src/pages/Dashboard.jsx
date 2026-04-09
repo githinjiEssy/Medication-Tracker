@@ -13,14 +13,16 @@ import {
   ChevronRight, 
   CheckCircle2,
   TrendingUp,
-  ShieldCheck
+  ShieldCheck,
+  Loader2,
+  Pill,
+  Calendar
 } from 'lucide-react';
 
 const Dashboard = () => {
   const [isMedModalOpen, setIsMedModalOpen] = useState(false);
   const [isSymptomModalOpen, setIsSymptomModalOpen] = useState(false);
-  const [dailySchedule, setDailySchedule] = useState([]);
-  const [stats, setStats] = useState({});
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
@@ -29,12 +31,8 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [intakesRes, dashboardRes] = await Promise.all([
-        medicationService.getTodayIntakes(),
-        medicationService.getDashboard()
-      ]);
-      setDailySchedule(intakesRes.data);
-      setStats(dashboardRes.data);
+      const response = await medicationService.getDashboard();
+      setDashboardData(response.data);
     } catch (err) {
       console.error("Error fetching dashboard data", err);
     } finally {
@@ -49,29 +47,35 @@ const Dashboard = () => {
   // Handler for marking a dose as taken
   const handleMarkTaken = async (intakeId) => {
     try {
-      await medicationService.markAsTaken(intakeId, { 
-        status: 'taken', 
-        taken_at: new Date().toISOString() 
-      });
+      await medicationService.markAsTaken(intakeId);
       // Refresh data to show updated state
       fetchDashboardData();
     } catch (err) {
-      alert("Failed to log dose");
+      console.error("Failed to log dose:", err);
+      alert("Failed to log dose. Please try again.");
     }
   };
 
-  // Mock data for today's tasks
-  // const dailySchedule = [
-  //   { id: 1, name: 'Lisinopril', time: '08:00 AM', taken: true, dose: '10mg' },
-  //   { id: 2, name: 'Metformin', time: '12:00 PM', taken: false, dose: '500mg' },
-  //   { id: 3, name: 'Metformin', time: '08:00 PM', taken: false, dose: '500mg' },
-  // ];
+  // Format time for display
+  const formatTime = (dateTimeString) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
 
-  // Mock User Data
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  // Mock User Data (Replace with actual user data from auth context/API)
   const userData = {
+    first_name: 'John',
     blood_group: 'B+',
     allergies: 'Penicillin',
-    emergency_contact_name: '', // Empty to test logic
+    emergency_contact_name: '',
     chronic_conditions: 'Hypertension',
     is_phone_verified: true
   };
@@ -91,7 +95,30 @@ const Dashboard = () => {
 
   const profileStrength = calculateStrength();
 
-  if (loading) return <div className="p-20 text-center font-bold">Loading your health data...</div>;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-[#f8fafb]">
+        <Sidebar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="animate-spin mx-auto mb-4 text-teal-600" size={48} />
+            <p className="text-slate-600 font-bold">Loading your health data...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Extract data from dashboard response
+  const summary = dashboardData?.summary || {};
+  const upcomingIntakes = dashboardData?.upcoming_intakes || [];
+  const recentComments = dashboardData?.recent_comments || [];
+  const lowRefills = dashboardData?.low_refills || [];
+
+  // Combine today's intakes from summary for display
+  // Note: The backend DashboardView doesn't return the actual intake objects,
+  // only counts. You might want to fetch today's intakes separately or
+  // modify the backend to include them.
 
   return (
     <div className="flex min-h-screen bg-[#f8fafb]">
@@ -99,8 +126,8 @@ const Dashboard = () => {
 
       <main className="flex-1 p-8">
         <TopBar 
-          title="Good Morning, John" 
-          description="Here is what's happening with your health today."
+          title={`${getGreeting()}, ${userData.first_name}`} 
+          description="Here's what's happening with your health today."
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
         />
@@ -110,11 +137,51 @@ const Dashboard = () => {
           {/* LEFT COLUMN: Main Information (8/12 units) */}
           <div className="col-span-12 lg:col-span-8 space-y-8">
             
-            {/* 1. Today's Schedule Card */}
+            {/* 1. Stats Overview Cards */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
+                    <Pill size={20} />
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 uppercase">Medications</span>
+                </div>
+                <p className="text-3xl font-black text-slate-900">{summary.total_medications || 0}</p>
+                <p className="text-xs text-slate-500 mt-1">Active prescriptions</p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 uppercase">Today's Doses</span>
+                </div>
+                <p className="text-3xl font-black text-slate-900">
+                  {summary.today_intakes?.taken || 0}/{summary.today_intakes?.total || 0}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {summary.today_intakes?.completion_rate || 0}% completed
+                </p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+                    <TrendingUp size={20} />
+                  </div>
+                  <span className="text-xs font-bold text-slate-400 uppercase">Adherence</span>
+                </div>
+                <p className="text-3xl font-black text-slate-900">{summary.overall_adherence_7d || 0}%</p>
+                <p className="text-xs text-slate-500 mt-1">Last 7 days</p>
+              </div>
+            </div>
+
+            {/* 2. Today's Schedule Card */}
             <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                  <Clock className="text-teal-600" size={22} /> Today's Schedule
+                  <Clock className="text-teal-600" size={22} /> Upcoming Doses
                 </h3>
                 <button 
                   onClick={() => navigate('/schedule')}
@@ -124,51 +191,97 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              <div className="space-y-4">
-                {dailySchedule.length > 0 ? dailySchedule.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-5 rounded-3xl bg-slate-50 border border-slate-100 group transition-all">
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {upcomingIntakes.length > 0 ? upcomingIntakes.slice(0, 5).map((intake) => (
+                  <div key={intake.id} className="flex items-center justify-between p-5 rounded-3xl bg-slate-50 border border-slate-100 group transition-all">
                     <div className="flex items-center gap-5">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.status === 'taken' ? 'bg-teal-100 text-teal-600' : 'bg-white text-slate-400 border border-slate-200'}`}>
-                        {item.status === 'taken' ? <CheckCircle2 size={24} /> : <div className="w-6 h-6 rounded-full border-2 border-slate-200" />}
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-white text-slate-400 border border-slate-200">
+                        <Clock size={20} />
                       </div>
                       <div>
-                        <p className={`font-bold ${item.status === 'taken' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                          {item.medication_name}
+                        <p className="font-bold text-slate-900">
+                          {intake.medication_name || `Medication ${intake.medication}`}
                         </p>
                         <p className="text-xs font-medium text-slate-500">
-                          {item.scheduled_time} • {item.dosage_override || 'Standard Dose'}
+                          {formatTime(intake.scheduled_time)} • {intake.dosage_taken || 'Standard Dose'}
                         </p>
                       </div>
                     </div>
-                    {item.status !== 'taken' && (
-                      <button 
-                        onClick={() => handleMarkTaken(item.id)}
-                        className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-teal-600 hover:text-white transition-all"
-                      >
-                        Log Dose
-                      </button>
-                    )}
+                    <button 
+                      onClick={() => navigate('/schedule')}
+                      className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-teal-600 hover:text-white transition-all"
+                    >
+                      Log Dose
+                    </button>
                   </div>
                 )) : (
-                  <p className="text-slate-400 italic text-center py-4">No medications scheduled for today.</p>
+                  <div className="text-center py-8">
+                    <Calendar size={48} className="mx-auto text-slate-200 mb-4" />
+                    <p className="text-slate-400 italic">No upcoming doses scheduled</p>
+                  </div>
                 )}
               </div>
             </section>
 
-            {/* 2. Analysis Preview (30d) */}
-            <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                  <Activity className="text-rose-500" size={22} /> Adverse Reactions
-                </h3>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last 30 Days</span>
-              </div>
-              
-              {/* Simplified Sparkline / Placeholder for Chart */}
-              <div className="h-40 w-full bg-slate-50 rounded-3xl flex items-center justify-center border border-dashed border-slate-200">
-                <p className="text-slate-400 font-bold text-sm italic">Symptom Trend Chart will render here</p>
-              </div>
-            </section>
+            {/* 3. Low Refills Alert */}
+            {lowRefills.length > 0 && (
+              <section className="bg-amber-50 p-6 rounded-[2.5rem] border border-amber-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <AlertTriangle className="text-amber-600" size={20} />
+                  <h3 className="text-lg font-black text-amber-900">Low Refill Reminders</h3>
+                </div>
+                <div className="space-y-3">
+                  {lowRefills.map((med) => (
+                    <div key={med.id} className="flex items-center justify-between p-3 bg-white rounded-2xl">
+                      <div>
+                        <p className="font-bold text-slate-900">{med.name}</p>
+                        <p className="text-xs text-slate-500">{med.refills_remaining} refills remaining</p>
+                      </div>
+                      <button className="text-xs font-bold text-amber-600 hover:underline">
+                        Refill Now
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 4. Recent Comments/Symptoms */}
+            {recentComments.length > 0 && (
+              <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                    <Activity className="text-rose-500" size={22} /> Recent Symptoms
+                  </h3>
+                  <button 
+                    onClick={() => navigate('/adverse-reactions')}
+                    className="text-xs font-bold text-teal-600 hover:underline"
+                  >
+                    View All
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {recentComments.slice(0, 3).map((comment) => (
+                    <div key={comment.id} className="p-4 bg-slate-50 rounded-2xl">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-500">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
+                        {comment.severity && (
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${
+                            comment.severity > 7 ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-600'
+                          }`}>
+                            Level {comment.severity}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-700 line-clamp-2">{comment.content}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
 
           {/* RIGHT COLUMN: Sidebar Actions (4/12 units) */}
@@ -188,7 +301,9 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-end">
                   <span className="text-3xl font-black text-slate-900">{profileStrength}%</span>
-                  <span className="text-xs font-bold text-teal-600 mb-1">Almost there!</span>
+                  <span className="text-xs font-bold text-teal-600 mb-1">
+                    {profileStrength === 100 ? 'Complete!' : 'Almost there!'}
+                  </span>
                 </div>
                 
                 {/* Progress Bar */}
@@ -207,7 +322,8 @@ const Dashboard = () => {
 
                 <button 
                   onClick={() => navigate('/profile')}
-                className="w-full py-3 mt-2 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 group">
+                  className="w-full py-3 mt-2 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 group"
+                >
                   Complete Profile <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
@@ -232,7 +348,7 @@ const Dashboard = () => {
               </div>
             </section>
 
-            {/* Insight Card */}
+            {/* Adherence Insight Card */}
             <section className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
@@ -241,15 +357,21 @@ const Dashboard = () => {
                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Weekly Insight</p>
               </div>
               <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                "Your adherence has improved by <span className="text-teal-600 font-bold">12%</span> this week. Keeping up this consistency helps stabilize your blood pressure."
+                {summary.overall_adherence_7d >= 80 ? (
+                  <>Your adherence is at <span className="text-teal-600 font-bold">{summary.overall_adherence_7d}%</span>. Excellent consistency this week!</>
+                ) : summary.overall_adherence_7d >= 50 ? (
+                  <>Your adherence is at <span className="text-amber-600 font-bold">{summary.overall_adherence_7d}%</span>. Try to stay on track with your schedule.</>
+                ) : (
+                  <>Your adherence is at <span className="text-rose-600 font-bold">{summary.overall_adherence_7d}%</span>. Consider setting reminders to help stay on schedule.</>
+                )}
               </p>
               <button 
-              onClick={() => navigate("/analytics")}
-              className="mt-6 w-full py-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-500 hover:text-teal-600 transition-colors flex items-center justify-center gap-2">
+                onClick={() => navigate("/analytics")}
+                className="mt-6 w-full py-3 bg-slate-50 rounded-xl text-xs font-bold text-slate-500 hover:text-teal-600 transition-colors flex items-center justify-center gap-2"
+              >
                 Full Report <ChevronRight size={14} />
               </button>
             </section>
-
           </div>
         </div>
 
@@ -257,10 +379,12 @@ const Dashboard = () => {
         <AddMedicationModal 
           isOpen={isMedModalOpen} 
           onClose={() => setIsMedModalOpen(false)} 
+          onSuccess={fetchDashboardData}
         />
         <AddSymptomModal 
           isOpen={isSymptomModalOpen} 
           onClose={() => setIsSymptomModalOpen(false)} 
+          onRefresh={fetchDashboardData}
         />
       </main>
     </div>
