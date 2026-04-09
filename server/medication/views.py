@@ -429,6 +429,30 @@ class MedicationViewSet(viewsets.ModelViewSet):
         except MedicationReminder.DoesNotExist:
             pass
 
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        """
+        Update medication status (ACTIVE, DISCONTINUED, PAUSED, COMPLETED)
+        """
+        medication = self.get_object()
+        new_status = request.data.get('status')
+        
+        if new_status not in ['ACTIVE', 'DISCONTINUED', 'PAUSED', 'COMPLETED']:
+            return Response(
+                {'error': 'Invalid status value'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        medication.status = new_status
+        medication.save()
+        
+        return Response({
+            'status': 'success',
+            'medication_id': medication.id,
+            'new_status': medication.status,
+            'status_display': medication.get_status_display()
+        })
+
 
 class ScheduleViewSet(viewsets.ModelViewSet):
     """
