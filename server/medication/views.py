@@ -24,15 +24,19 @@ from .models import MedicationNotification
 @permission_classes([IsAuthenticated])
 def get_unalerted_notifications(request):
     """Get all unalerted notifications for the user"""
+    
+    now = timezone.now()
     notifications = MedicationNotification.objects.filter(
-        user=request.user, 
-        is_alerted=False
+        patient=request.user, 
+        is_alerted=False,
+        scheduled_time__lte=now
     )
     data = [{
         'id': n.id,
-        'title': 'Medication Reminder',
-        'message': f"Time to take your medication: {n.medication.name}",
+        'title': n.title,      
+        'message': n.message,  
     } for n in notifications]
+    
     return Response(data)
 
 @api_view(['POST'])
@@ -40,7 +44,7 @@ def get_unalerted_notifications(request):
 def mark_notification_alerted(request, id):
     """Mark a notification as alerted"""
     try:
-        notification = MedicationNotification.objects.get(id=id, user=request.user)
+        notification = MedicationNotification.objects.get(id=id, patient=request.user)
         notification.is_alerted = True
         notification.save()
         return Response({'status': 'success'})
