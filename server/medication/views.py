@@ -17,6 +17,34 @@ from .serializers import (
     CommentCreateSerializer, IntakeMarkTakenSerializer,
     AdherenceStatsSerializer
 )
+from .models import MedicationNotification
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_unalerted_notifications(request):
+    """Get all unalerted notifications for the user"""
+    notifications = MedicationNotification.objects.filter(
+        user=request.user, 
+        is_alerted=False
+    )
+    data = [{
+        'id': n.id,
+        'title': 'Medication Reminder',
+        'message': f"Time to take your medication: {n.medication.name}",
+    } for n in notifications]
+    return Response(data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def mark_notification_alerted(request, id):
+    """Mark a notification as alerted"""
+    try:
+        notification = MedicationNotification.objects.get(id=id, user=request.user)
+        notification.is_alerted = True
+        notification.save()
+        return Response({'status': 'success'})
+    except MedicationNotification.DoesNotExist:
+        return Response({'error': 'Notification not found'}, status=404)
 
 
 class IsOwner(permissions.BasePermission):
@@ -402,14 +430,18 @@ class MedicationViewSet(viewsets.ModelViewSet):
                 )
                 scheduled_datetime = timezone.make_aware(scheduled_datetime)
                 
-                MedicationIntake.objects.get_or_create(
-                    medication=medication,
-                    scheduled_time=scheduled_datetime,
-                    defaults={
-                        'status': 'PENDING',
-                        'dosage_taken': schedule.dosage
-                    }
-                )
+                intake, created = MedicationIntake.objects.get_or_create(medication=medication,scheduled_time=scheduled_datetime,defaults={'status':'PENDING','dosage_taken':schedule.dosage}
+                                                                )
+                
+                #create notificationwhen intake is created
+                if created:
+                    MedicationNotification.objects.get_or_create(
+                        user=medication.patient,
+                        medication=medication,
+                        scheduled_time = scheduled_datetime,
+                        defaults={'is_alerted': False}
+                    )
+                
             
             current_date += timedelta(days=1)
     
@@ -931,3 +963,5 @@ class NotificationViewSet(viewsets.ModelViewSet):
                             defaults={'is_sent': False}
                         )
                 curr += timedelta(days=1)
+                
+                

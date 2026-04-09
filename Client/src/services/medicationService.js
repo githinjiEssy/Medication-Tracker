@@ -88,5 +88,11 @@ export const medicationService = {
   // 20. Add Comment to Intake (POST /api/medications/intakes/{id}/add_comment/)
   addIntakeComment: (id, data) => {
     return api.post(`medications/intakes/${id}/add_comment/`, data);
-  }
+  },
+
+  // 21. Fetch notifications that need a popup
+  getUnalertedNotifications: () => api.get('medications/notifications/unalerted/'),
+
+  // 22. Mark notification as alerted
+  markAsAlerted: (id) => api.post(`medications/notifications/${id}/mark_alerted/`),
 };
