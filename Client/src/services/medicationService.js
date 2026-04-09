@@ -22,6 +22,71 @@ export const medicationService = {
   // 7. Update Medication (PATCH /api/medications/medications/{id}/)
   updateMedication: (id, data) => api.patch(`medications/medications/${id}/`, data),
 
-  // 8. Delete Medication (DELETE /api/medications/medications/{id}/)
-  deleteMedication: (id) => api.delete(`medications/medications/${id}/`)
+  // 8. Update Medication Status (POST /api/medications/medications/{id}/update_status/)
+  updateMedicationStatus: (id, status) => api.post(`medications/medications/${id}/update_status/`, { status }),
+
+  // 9. Delete Medication (DELETE /api/medications/medications/{id}/)
+  deleteMedication: (id) => api.delete(`medications/medications/${id}/`),
+
+  // 10. Get Statistics (GET /api/medications/statistics/)
+  getStatistics: (days = 30) => {
+    return api.get('medications/statistics/', {
+      params: { days }
+    });
+  },
+
+  // 11. Get Daily Intakes for specific date (GET /api/medications/daily-intakes/)
+  getDailyIntakes: (date = null) => {
+    const params = date ? { date } : {};
+    return api.get('medications/daily-intakes/', { params });
+  },
+
+  // 12. Get Upcoming Intakes (GET /api/medications/upcoming-intakes/)
+  getUpcomingIntakes: (hours = 24) => {
+    return api.get('medications/upcoming-intakes/', {
+      params: { hours }
+    });
+  },
+
+  // 13. Get Medication Schedules (GET /api/medications/medications/{id}/schedules/)
+  getMedicationSchedules: (id) => {
+    return api.get(`medications/medications/${id}/schedules/`);
+  },
+
+  // 14. Add Medication Schedule (POST /api/medications/medications/{id}/add_schedule/)
+  addMedicationSchedule: (id, data) => {
+    return api.post(`medications/medications/${id}/add_schedule/`, data);
+  },
+
+  // 15. Get Medication Intakes (GET /api/medications/medications/{id}/intakes/)
+  getMedicationIntakes: (id, params) => {
+    return api.get(`medications/medications/${id}/intakes/`, { params });
+  },
+
+  // 16. Record Intake (POST /api/medications/medications/{id}/record_intake/)
+  recordIntake: (id, data) => {
+    return api.post(`medications/medications/${id}/record_intake/`, data);
+  },
+
+  // 17. Get Medication Adherence (GET /api/medications/medications/{id}/adherence/)
+  getMedicationAdherence: (id, days = 30) => {
+    return api.get(`medications/medications/${id}/adherence/`, {
+      params: { days }
+    });
+  },
+
+  // 18. Sync Existing Medication Schedule (POST /api/medications/medications/{id}/sync_existing/)
+  syncMedicationSchedule: (id) => {
+    return api.post(`medications/medications/${id}/sync_existing/`);
+  },
+
+  // 19. Update Intake (PATCH /api/medications/intakes/{id}/)
+  updateIntake: (id, data) => {
+    return api.patch(`medications/intakes/${id}/`, data);
+  },
+
+  // 20. Add Comment to Intake (POST /api/medications/intakes/{id}/add_comment/)
+  addIntakeComment: (id, data) => {
+    return api.post(`medications/intakes/${id}/add_comment/`, data);
+  }
 };
