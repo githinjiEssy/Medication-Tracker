@@ -41,11 +41,15 @@ class MedicationCommentSerializer(serializers.ModelSerializer):
     Serializer for MedicationComment
     """
     time_ago = serializers.SerializerMethodField()
-    
+    medication_name = serializers.CharField(
+        source='medication.name', 
+        read_only=True  # ✅ Must add read_only=True
+    )
+
     class Meta:
         model = MedicationComment
         fields = [
-            'id', 'comment_type', 'content', 'severity',
+            'id', 'medication', 'medication_name', 'comment_type', 'content', 'severity',
             'effectiveness', 'time_ago', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

@@ -1,10 +1,68 @@
-import React, { useState } from 'react';
-import { X, Activity, AlertCircle, Calendar, Clock, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Activity, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { commentService } from '../services/commentService';
+import { medicationService } from '../services/medicationService';
 
-const AddSymptomModal = ({ isOpen, onClose }) => {
+const AddSymptomModal = ({ isOpen, onClose, onRefresh }) => {
   const [severity, setSeverity] = useState(3);
-  
+  const [medications, setMedications] = useState([]);
+  const [selectedMedication, setSelectedMedication] = useState('');
+  const [symptomType, setSymptomType] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      medicationService.getMedications().then(response => {
+        const meds = Array.isArray(response.data) ? response.data : response.data.results || [];
+        setMedications(meds);
+      }).catch(error => console.error('Error fetching medications:', error));
+    }
+  }, [isOpen]);
+
+  const handleSave = async () => {
+    // 1. Validation
+    if (!selectedMedication || !symptomType) {
+      alert('Please select a medication and a symptom type.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fullNote = notes ? `${symptomType}: ${notes}` : symptomType;
+      const severityInt = parseInt(severity, 10);
+
+      await commentService.addMedicationSideEffect(
+        selectedMedication, 
+        fullNote, 
+        severityInt
+      );
+
+      if (onRefresh) onRefresh();
+      
+      // Reset and Close
+      setNotes('');
+      setSymptomType('');
+      setSelectedMedication('');
+      setSeverity(3);
+      onClose();
+
+    } catch (error) {
+      console.error('Submission Error:', error.response?.data);
+      const serverErrors = error.response?.data;
+      
+      // Better error messaging for the user
+      const message = serverErrors 
+        ? Object.entries(serverErrors).map(([k, v]) => `${k}: ${v}`).join('\n')
+        : 'There was an error saving your symptom.';
+      
+      alert(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const commonSymptoms = ["Dizziness", "Nausea", "Fatigue", "Headache", "Insomnia", "Dry Mouth"];
@@ -12,7 +70,6 @@ const AddSymptomModal = ({ isOpen, onClose }) => {
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        {/* Backdrop */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -21,7 +78,6 @@ const AddSymptomModal = ({ isOpen, onClose }) => {
           className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
         />
 
-        {/* Modal Card */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -45,7 +101,20 @@ const AddSymptomModal = ({ isOpen, onClose }) => {
           </div>
 
           <div className="p-8 space-y-6">
-            {/* Symptom Selection */}
+            {/* Medication Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 ml-1">Which medication?</label>
+              <select 
+                value={selectedMedication}
+                onChange={(e) => setSelectedMedication(e.target.value)}
+                className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:border-rose-500"
+              >
+                <option value="">Select Medication...</option>
+                {medications.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+
+            {/* Symptom Quick-Select */}
             <div className="space-y-3">
               <label className="text-sm font-bold text-slate-700 ml-1">What are you feeling?</label>
               <div className="flex flex-wrap gap-2">
@@ -53,16 +122,12 @@ const AddSymptomModal = ({ isOpen, onClose }) => {
                   <button 
                     key={symptom}
                     type="button"
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:border-rose-500 hover:text-rose-500 transition-all bg-white shadow-sm"
+                    onClick={() => setSymptomType(symptom)}
+                    className={`px-4 py-2 rounded-xl border text-xs font-bold transition-all shadow-sm ${symptomType === symptom ? 'bg-rose-500 border-rose-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-rose-500'}`}
                   >
                     {symptom}
                   </button>
                 ))}
-                <input 
-                  type="text" 
-                  placeholder="+ Other" 
-                  className="px-4 py-2 rounded-xl border border-dashed border-slate-300 text-xs font-bold w-24 outline-none focus:border-rose-500"
-                />
               </div>
             </div>
 
@@ -84,43 +149,22 @@ const AddSymptomModal = ({ isOpen, onClose }) => {
                 onChange={(e) => setSeverity(e.target.value)}
                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-rose-500"
               />
-              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                <span>Mild</span>
-                <span>Moderate</span>
-                <span>Severe</span>
-              </div>
             </div>
 
-            {/* Date & Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Date</label>
-                <div className="relative">
-                  <Calendar size={16} className="absolute left-4 top-4 text-slate-400" />
-                  <input type="date" className="w-full pl-11 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:border-rose-500 transition-all" defaultValue={new Date().toISOString().split('T')[0]} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Time</label>
-                <div className="relative">
-                  <Clock size={16} className="absolute left-4 top-4 text-slate-400" />
-                  <input type="time" className="w-full pl-11 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:border-rose-500 transition-all" />
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
+            {/* Additional Notes */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 ml-1">Additional Notes</label>
               <textarea 
-                rows="3" 
-                placeholder="Describe how long it lasted or if anything triggered it..." 
+                rows="3"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Describe how long it lasted or triggers..." 
                 className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm outline-none focus:border-rose-500 transition-all resize-none"
               />
             </div>
           </div>
 
-          {/* Footer Actions */}
+          {/* Actions */}
           <div className="p-8 border-t border-slate-50 flex gap-4 bg-white">
             <button 
               onClick={onClose}
@@ -128,8 +172,12 @@ const AddSymptomModal = ({ isOpen, onClose }) => {
             >
               Cancel
             </button>
-            <button className="flex-1 py-4 bg-rose-500 text-white rounded-2xl font-bold hover:bg-rose-600 shadow-xl shadow-rose-500/20 transition-all">
-              Save Entry
+            <button 
+              onClick={handleSave}
+              disabled={loading}
+              className="flex-1 py-4 bg-rose-500 text-white rounded-2xl font-bold hover:bg-rose-600 shadow-xl shadow-rose-500/20 transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : 'Save Entry'}
             </button>
           </div>
         </motion.div>
