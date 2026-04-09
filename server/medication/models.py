@@ -425,10 +425,11 @@ class MedicationReminder(models.Model):
     
     
 class MedicationNotification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     medication = models.ForeignKey(Medication, on_delete=models.CASCADE)
     scheduled_time = models.DateTimeField()
     is_alerted = models.BooleanField(default=False)
+    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -436,3 +437,11 @@ class MedicationNotification(models.Model):
 
     def __str__(self):
         return f"{self.medication.name} - {self.scheduled_time}"
+    # <--- ADD THESE PROPERTIES FOR THE REACT FRONTEND --->
+    @property
+    def title(self):
+        return "Medication Reminder"
+
+    @property
+    def message(self):
+        return f"Time to take your medication: {self.medication.name}"
