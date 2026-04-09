@@ -1,5 +1,6 @@
 from rest_framework import generics, permissions, status, viewsets, filters
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -436,7 +437,7 @@ class MedicationViewSet(viewsets.ModelViewSet):
                 #create notificationwhen intake is created
                 if created:
                     MedicationNotification.objects.get_or_create(
-                        user=medication.patient,
+                        patient=medication.patient,
                         medication=medication,
                         scheduled_time = scheduled_datetime,
                         defaults={'is_alerted': False}
@@ -909,7 +910,7 @@ class UpcomingIntakesView(generics.ListAPIView):
             status='PENDING'
         ).select_related('medication').order_by('scheduled_time')
         
-from .models import Notification
+from .models import MedicationNotification
 from .serializers import NotificationSerializer
 
 class NotificationViewSet(viewsets.ModelViewSet):
@@ -921,7 +922,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # Only return notifications for the currently logged-in user
-        return Notification.objects.filter(patient=self.request.user)
+        return MedicationNotification.objects.filter(patient=self.request.user)
     
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
