@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 import { medicationService } from '../services/medicationService';
@@ -10,20 +11,40 @@ import {
   Share2, 
   CheckCircle2, 
   AlertCircle, 
-  ArrowUpRight,
-  ArrowDownRight,
   Loader2,
-  Pill,
   Activity,
-  Clock
+  Clock,
+  Mail,
+  MessageCircle,
 } from 'lucide-react';
-import { generateHealthReport } from '../utils/pdfGenerator';
+import { generateHealthReport, shareHealthReport } from '../utils/pdfGenerator';
 
 const AnalyticsPage = () => {
-  const [timeRange, setTimeRange] = useState(30); // days
+  const { user } = useContext(AuthContext);
+  const [timeRange, setTimeRange] = useState(30);
   const [statistics, setStatistics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [exportMode, setExportMode] = useState('full'); // 'full' or 'share'
+
+  // Build complete user data object from auth context
+  const userData = {
+    username: user?.username || '',
+    email: user?.email || 'Not specified',
+    first_name: user?.first_name || '',
+    last_name: user?.last_name || '',
+    full_name: user?.full_name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Patient',
+    phone_number: user?.phone_number || 'Not specified',
+    date_of_birth: user?.date_of_birth || null,
+    age: user?.age || 'N/A',
+    gender: user?.gender === 'M' ? 'Male' : user?.gender === 'F' ? 'Female' : 'Not specified',
+    blood_group: user?.blood_group || 'Not specified',
+    emergency_contact_name: user?.emergency_contact_name || 'Not specified',
+    emergency_contact_phone: user?.emergency_contact_phone || 'Not specified',
+    allergies: user?.allergies || 'None reported',
+    chronic_conditions: user?.chronic_conditions || 'None reported',
+  };
 
   // Fetch statistics data
   const fetchStatistics = async (days = 30) => {
@@ -60,27 +81,62 @@ const AnalyticsPage = () => {
     return `${value || 0}%`;
   };
 
-  // Get trend indicator
-  const getTrendIndicator = (current, previous) => {
-    if (!previous) return null;
-    const change = current - previous;
-    if (change > 0) {
-      return { icon: <ArrowUpRight size={12} />, color: 'text-green-600 bg-green-50', text: `+${change.toFixed(1)}%` };
-    } else if (change < 0) {
-      return { icon: <ArrowDownRight size={12} />, color: 'text-rose-600 bg-rose-50', text: `${change.toFixed(1)}%` };
-    }
-    return null;
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
-  // Prepare data for adherence chart
-  const getAdherenceChartData = () => {
-    if (!statistics?.adherence_by_medication) return [];
-    return statistics.adherence_by_medication.slice(0, 7).map(med => ({
+  // Handle PDF Export
+  const handleExportPDF = (mode = 'full') => {
+    const prescriptionsForPDF = adherenceByMed.map(med => ({
       name: med.name,
-      rate: med.adherence_rate,
-      taken: med.taken_doses,
-      total: med.total_doses
+      dosage: 'See prescription', // Default since dosage isn't in statistics
+      adherence_rate: med.adherence_rate,
+      taken_doses: med.taken_doses,
+      total_doses: med.total_doses,
+      status: 'Active' // Default since status isn't in statistics
     }));
+      
+    console.log('Exporting PDF with mode:', mode);
+    console.log('UserData:', userData);
+    console.log('Statistics:', statistics);
+    console.log('Prescriptions:', prescriptionsForPDF);
+    
+    try {
+      generateHealthReport(userData, statistics, prescriptionsForPDF, mode);
+      setShowShareMenu(false);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Handle Share
+  const handleShare = (method) => {
+    const prescriptionsForPDF = adherenceByMed.map(med => ({
+      name: med.name,
+      adherence_rate: med.adherence_rate,
+      taken_doses: med.taken_doses,
+      total_doses: med.total_doses,
+    }));
+    
+    console.log('Sharing via:', method);
+    
+    try {
+      const result = shareHealthReport(userData, statistics, prescriptionsForPDF, method);
+      if (!result) {
+        alert('Sharing failed or was cancelled.');
+      }
+      setShowShareMenu(false);
+    } catch (error) {
+      console.error('Error sharing:', error);
+      alert('Failed to share. Please try again.');
+    }
   };
 
   // Loading state
@@ -151,20 +207,6 @@ const AnalyticsPage = () => {
     },
   ];
 
-  // Mock user data for PDF (replace with actual user data from auth context)
-  const userData = { name: "John Doe" };
-  
-  // Prepare prescriptions for PDF
-  const prescriptionsForPDF = adherenceByMed.map(med => ({
-    name: med.name,
-    adherence: `${med.adherence_rate}%`,
-    doses: `${med.taken_doses}/${med.total_doses}`
-  }));
-
-  const handleExportPDF = () => {
-    generateHealthReport(userData, prescriptionsForPDF, []);
-  };
-
   return (
     <div className="flex min-h-screen bg-[#f8fafb]">
       <Sidebar />
@@ -182,19 +224,82 @@ const AnalyticsPage = () => {
                 Period: {statistics?.period_days || timeRange} days
               </span>
             </p>
+            {userData.full_name !== 'Patient' && (
+              <p className="text-xs text-slate-400 mt-1">
+                Report for: {userData.full_name}
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={handleExportPDF} 
-              className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
-            >
-              <Download size={18} className="text-teal-600" />
-              Export PDF
-            </button>
-            <button className="flex items-center gap-2 px-5 py-3 bg-teal-600 text-white rounded-2xl font-bold hover:bg-teal-700 shadow-lg shadow-teal-600/20 transition-all">
-              <Share2 size={18} />
-              Share with Doctor
-            </button>
+            
+            {/* Export Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                <Download size={18} className="text-teal-600" />
+                Export
+              </button>
+              
+              {showShareMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowShareMenu(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-100 z-20 overflow-hidden">
+                    <div className="p-3 border-b border-slate-100">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Download PDF</p>
+                    </div>
+                    <button
+                      onClick={() => handleExportPDF('full')}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <Download size={16} className="text-teal-600" />
+                      <div>
+                        <p className="font-bold">Full Report</p>
+                        <p className="text-[10px] text-slate-400">Complete medical history</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleExportPDF('share')}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors border-t border-slate-100"
+                    >
+                      <Share2 size={16} className="text-blue-600" />
+                      <div>
+                        <p className="font-bold">Share-Friendly Report</p>
+                        <p className="text-[10px] text-slate-400">Redacted contact details</p>
+                      </div>
+                    </button>
+                    
+                    <div className="p-3 border-t border-b border-slate-100 bg-slate-50">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Share via</p>
+                    </div>
+                    <button
+                      onClick={() => handleShare('email')}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <Mail size={16} className="text-teal-600" />
+                      <div>
+                        <p className="font-bold">Email</p>
+                        <p className="text-[10px] text-slate-400">Send to healthcare provider</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleShare('whatsapp')}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors border-t border-slate-100"
+                    >
+                      <MessageCircle size={16} className="text-green-600" />
+                      <div>
+                        <p className="font-bold">WhatsApp</p>
+                        <p className="text-[10px] text-slate-400">Share summary via message</p>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
@@ -368,9 +473,9 @@ const AnalyticsPage = () => {
             </div>
 
             {/* Insight */}
-            <div className="mt-6 p-5 bg-blue-50 rounded-3xl border border-blue-100">
-              <p className="text-xs text-blue-800 leading-relaxed font-medium">
-                <span className="font-bold">Insight:</span>{' '}
+            <div className="mt-6 p-5 bg-gradient-to-r from-blue-50 to-teal-50 rounded-3xl border border-blue-100">
+              <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                <span className="font-bold text-teal-700">💡 Insight:</span>{' '}
                 {intakesData.adherence_rate >= 80 ? (
                   "Excellent adherence! Your consistency is helping maintain stable medication levels."
                 ) : intakesData.adherence_rate >= 50 ? (
