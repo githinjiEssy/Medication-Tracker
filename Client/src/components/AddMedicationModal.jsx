@@ -54,20 +54,48 @@ const AddMedicationModal = ({ isOpen, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+    
     try {
+      // Determine the correct frequency
+      let finalFrequency = formData.frequency;
+      
+      // If there are specific times, force frequency to SPECIFIC
+      if (specificTimes.length > 0) {
+        finalFrequency = 'SPECIFIC';
+      }
+      
       const payload = {
         ...formData,
-        frequency: specificTimes.length > 0 ? 'SPECIFIC' : formData.frequency,
-        specific_times: specificTimes, // Sending the array from our local state
+        frequency: finalFrequency,
+        specific_times: specificTimes,
         end_date: isOngoing ? null : (formData.end_date || null),
         refills_remaining: parseInt(formData.refills_remaining) || 0,
+        quantity: formData.quantity ? parseInt(formData.quantity) : null,
       };
-
+      
+      // Validate specific times if frequency is SPECIFIC
+      if (finalFrequency === 'SPECIFIC' && specificTimes.length === 0) {
+        setError({ specific_times: ['Please add at least one time for SPECIFIC frequency'] });
+        setLoading(false);
+        return;
+      }
+      
+      // Validate frequency_other if frequency is OTHER
+      if (finalFrequency === 'OTHER' && !formData.frequency_other) {
+        setError({ frequency_other: ['Please specify the frequency'] });
+        setLoading(false);
+        return;
+      }
+      
+      console.log('Submitting payload:', payload); // For debugging
+      
       await medicationService.createMedication(payload);
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      setError(err.response?.data || "Check your input");
+      console.error('Error creating medication:', err);
+      setError(err.response?.data || "Failed to create medication. Check your input.");
     } finally {
       setLoading(false);
     }
@@ -106,16 +134,35 @@ const AddMedicationModal = ({ isOpen, onClose, onSuccess }) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2"><ClipboardList size={18} className="text-teal-600"/><h3 className="font-bold text-slate-800">Basic Information</h3></div>
               <div className="grid md:grid-cols-2 gap-4">
-                <div><label className={labelStyle}>Brand Name</label><input required id="name" value={formData.name} onChange={handleChange} type="text" placeholder="e.g. Panadol" className={inputStyle} /></div>
-                <div><label className={labelStyle}>Generic Name</label><input id="generic_name" value={formData.generic_name} onChange={handleChange} type="text" placeholder="e.g. Paracetamol" className={inputStyle} /></div>
+                <div>
+                  <label className={labelStyle}>Brand Name</label>
+                  <input required id="name" value={formData.name} onChange={handleChange} type="text" placeholder="e.g. Panadol" className={inputStyle} />
+                </div>
+                <div>
+                  <label className={labelStyle}>Generic Name</label>
+                  <input id="generic_name" value={formData.generic_name} onChange={handleChange} type="text" placeholder="e.g. Paracetamol" className={inputStyle} />
+                </div>
               </div>
               <div className="grid md:grid-cols-3 gap-4">
-                <div><label className={labelStyle}>Dosage (e.g. 500mg)</label><input required id="dosage" value={formData.dosage} onChange={handleChange} type="text" className={inputStyle} /></div>
-                <div><label className={labelStyle}>Form</label><select id="dosage_form" value={formData.dosage_form} onChange={handleChange} className={inputStyle}>
-                    <option value="TABLET">Tablet</option><option value="CAPSULE">Capsule</option><option value="LIQUID">Liquid</option><option value="INJECTION">Injection</option>
-                </select></div>
-                <div><label className={labelStyle}>Route</label><select id="route" value={formData.route} onChange={handleChange} className={inputStyle}>
-                    <option value="ORAL">Oral</option><option value="TOPICAL">Topical</option><option value="INHALATION">Inhalation</option>
+                <div>
+                  <label className={labelStyle}>Dosage (e.g. 500mg)</label>
+                  <input required id="dosage" value={formData.dosage} onChange={handleChange} type="text" className={inputStyle} />
+                </div>
+                <div>
+                  <label className={labelStyle}>Form</label>
+                  <select id="dosage_form" value={formData.dosage_form} onChange={handleChange} className={inputStyle}>
+                    <option value="TABLET">Tablet</option>
+                    <option value="CAPSULE">Capsule</option>
+                    <option value="LIQUID">Liquid</option>
+                    <option value="INJECTION">Injection</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelStyle}>Route</label>
+                  <select id="route" value={formData.route} onChange={handleChange} className={inputStyle}>
+                    <option value="ORAL">Oral</option>
+                    <option value="TOPICAL">Topical</option>
+                    <option value="INHALATION">Inhalation</option>
                 </select></div>
               </div>
             </div>
@@ -123,20 +170,79 @@ const AddMedicationModal = ({ isOpen, onClose, onSuccess }) => {
             {/* Section 2: Scheduling */}
             <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2"><Clock size={18} className="text-teal-600"/><h3 className="font-bold text-slate-800">Schedule & Dates</h3></div>
+                <div className="flex items-center gap-2">
+                  <Clock size={18} className="text-teal-600"/>
+                  <h3 className="font-bold text-slate-800">Schedule & Dates</h3>
+                </div>
                 <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-xl border border-slate-200">
-                  <input type="checkbox" id="ongoing" checked={isOngoing} onChange={() => setIsOngoing(!isOngoing)} className="w-4 h-4 accent-teal-600 cursor-pointer" />
+                  <input 
+                    type="checkbox" 
+                    id="ongoing" 
+                    checked={isOngoing} 
+                    onChange={() => setIsOngoing(!isOngoing)} 
+                    className="w-4 h-4 accent-teal-600 cursor-pointer" 
+                  />
                   <label htmlFor="ongoing" className="text-xs font-bold text-slate-600">Ongoing</label>
                 </div>
               </div>
+              
               <div className="grid md:grid-cols-3 gap-4">
-                <div><label className={labelStyle}>Frequency</label><select id="frequency" value={formData.frequency} onChange={handleChange} className={inputStyle}>
-                    <option value="ONCE">Once daily</option><option value="TWICE">Twice daily</option><option value="AS_NEEDED">As needed</option><option value="OTHER">Other</option>
-                </select></div>
-                <div><label className={labelStyle}>Start Date</label><input id="start_date" type="date" value={formData.start_date} onChange={handleChange} className={inputStyle} /></div>
-                {!isOngoing && <div><label className={labelStyle}>End Date</label><input id="end_date" type="date" value={formData.end_date} onChange={handleChange} className={inputStyle} /></div>}
+                <div>
+                  <label className={labelStyle}>Frequency</label>
+                  <select 
+                    id="frequency" 
+                    value={formData.frequency} 
+                    onChange={handleChange} 
+                    className={inputStyle}
+                  >
+                    <option value="ONCE">Once daily</option>
+                    <option value="TWICE">Twice daily</option>
+                    <option value="THRICE">Three times daily</option>
+                    <option value="FOUR">Four times daily</option>
+                    <option value="EVERY_OTHER">Every other day</option>
+                    <option value="WEEKLY">Once weekly</option>
+                    <option value="BIWEEKLY">Twice weekly</option>
+                    <option value="MONTHLY">Once monthly</option>
+                    <option value="AS_NEEDED">As needed</option>
+                    <option value="SPECIFIC">Specific times</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelStyle}>Start Date</label>
+                  <input 
+                    id="start_date" 
+                    type="date" 
+                    value={formData.start_date} 
+                    onChange={handleChange} 
+                    className={inputStyle} 
+                    required
+                  />
+                </div>
+                {!isOngoing && (
+                  <div>
+                    <label className={labelStyle}>End Date</label>
+                    <input 
+                      id="end_date" 
+                      type="date" 
+                      value={formData.end_date} 
+                      onChange={handleChange} 
+                      className={inputStyle} 
+                    />
+                  </div>
+                )}
               </div>
-              {formData.frequency === 'OTHER' && <input id="frequency_other" value={formData.frequency_other} onChange={handleChange} type="text" placeholder="Specify frequency..." className={`${inputStyle} bg-white mt-2`} />}
+              
+              {formData.frequency === 'OTHER' && (
+                <input 
+                  id="frequency_other" 
+                  value={formData.frequency_other} 
+                  onChange={handleChange} 
+                  type="text" 
+                  placeholder="Specify frequency..." 
+                  className={`${inputStyle} bg-white mt-2`} 
+                />
+              )}
             </div>
 
             {/* Dosing Schedule Times */}
@@ -177,24 +283,57 @@ const AddMedicationModal = ({ isOpen, onClose, onSuccess }) => {
             {/* Section 3: Medical/Pharmacy Details */}
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-4">
-                <div className="flex items-center gap-2"><User size={18} className="text-teal-600"/><h3 className="font-bold text-slate-800">Prescriber</h3></div>
-                <div><label className={labelStyle}>Prescribed By</label><input id="prescribed_by" value={formData.prescribed_by} onChange={handleChange} type="text" placeholder="Dr. Name" className={inputStyle} /></div>
-                <div><label className={labelStyle}>Prescription #</label><input id="prescription_number" value={formData.prescription_number} onChange={handleChange} type="text" className={inputStyle} /></div>
-                <div><label className={labelStyle}>Reason for taking</label><input id="reason" value={formData.reason} onChange={handleChange} type="text" placeholder="e.g. Hypertension" className={inputStyle} /></div>
+                <div className="flex items-center gap-2">
+                  <User size={18} className="text-teal-600"/>
+                  <h3 className="font-bold text-slate-800">Prescriber</h3>
+                </div>
+                <div>
+                  <label className={labelStyle}>Prescribed By</label>
+                  <input id="prescribed_by" value={formData.prescribed_by} onChange={handleChange} type="text" placeholder="Dr. Name" className={inputStyle} />
+                </div>
+                <div>
+                  <label className={labelStyle}>Prescription #</label>
+                  <input id="prescription_number" value={formData.prescription_number} onChange={handleChange} type="text" className={inputStyle} />
+                </div>
+                <div>
+                  <label className={labelStyle}>Reason for taking</label>
+                  <input id="reason" value={formData.reason} onChange={handleChange} type="text" placeholder="e.g. Hypertension" className={inputStyle} />
+                </div>
               </div>
               <div className="space-y-4">
                 <div className="flex items-center gap-2"><Building2 size={18} className="text-teal-600"/><h3 className="font-bold text-slate-800">Pharmacy</h3></div>
-                <div><label className={labelStyle}>Pharmacy Name</label><input id="pharmacy_name" value={formData.pharmacy_name} onChange={handleChange} type="text" className={inputStyle} /></div>
-                <div><label className={labelStyle}>Pharmacy Phone</label><input id="pharmacy_phone" value={formData.pharmacy_phone} onChange={handleChange} type="tel" className={inputStyle} /></div>
+                <div>
+                  <label className={labelStyle}>Pharmacy Name</label>
+                  <input id="pharmacy_name" value={formData.pharmacy_name} onChange={handleChange} type="text" className={inputStyle} />
+                </div>
+                <div>
+                  <label className={labelStyle}>Pharmacy Phone</label>
+                  <input id="pharmacy_phone" value={formData.pharmacy_phone} onChange={handleChange} type="tel" className={inputStyle} />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><label className={labelStyle}>Total Quantity</label><input id="quantity" value={formData.quantity} onChange={handleChange} type="number" className={inputStyle} /></div>
-                  <div><label className={labelStyle}>Refills Left</label><input id="refills_remaining" value={formData.refills_remaining} onChange={handleChange} type="number" className={inputStyle} /></div>
+                  <div>
+                    <label className={labelStyle}>Total Quantity</label>
+                    <input id="quantity" value={formData.quantity} onChange={handleChange} type="number" className={inputStyle} />
+                  </div>
+                  <div>
+                    <label className={labelStyle}>Refills Left</label>
+                    <input id="refills_remaining" value={formData.refills_remaining} onChange={handleChange} type="number" className={inputStyle} />
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* prescribed date */}
+            <div>
+              <label className={labelStyle}>Prescribed Date</label>
+              <input type="date" id='prescribedDate' value={formData.prescribed_date} onChange={handleChange} className={inputStyle} />
+            </div>
+
             {/* Instructions */}
-            <div><label className={labelStyle}>Instructions</label><textarea id="instructions" value={formData.instructions} onChange={handleChange} rows="2" className={`${inputStyle} resize-none`} placeholder="e.g. Take with food..." /></div>
+            <div>
+              <label className={labelStyle}>Instructions</label>
+              <textarea id="instructions" value={formData.instructions} onChange={handleChange} rows="2" className={`${inputStyle} resize-none`} placeholder="e.g. Take with food..." />
+            </div>
           </form>
 
           {/* Footer */}
