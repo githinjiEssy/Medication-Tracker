@@ -16,7 +16,10 @@ router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 
 urlpatterns = [
-    path('', include(router.urls)),
+   
+    
+    path('notifications/unalerted/', views.get_unalerted_notifications, name='unalerted_notifications'),
+    path('notifications/<int:id>/mark_alerted/', views.mark_notification_alerted, name='mark_alerted'),
     
     # Dashboard and Statistics
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
@@ -26,6 +29,6 @@ urlpatterns = [
     path('daily-intakes/', DailyIntakeView.as_view(), name='daily-intakes'),
     path('today/', DailyIntakeView.as_view(), name='today-intakes'),  # Same view, defaults to today
     path('upcoming-intakes/', UpcomingIntakesView.as_view(), name='upcoming-intakes'),
-    path('notifications/unalerted/', views.get_unalerted_notifications, name='unalerted_notifications'),
-    path('notifications/<int:id>/mark_alerted/', views.mark_notification_alerted, name='mark_alerted'),
+    
+     path('', include(router.urls)),
 ]
