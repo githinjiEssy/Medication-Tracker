@@ -23,5 +23,11 @@ export const medicationService = {
   updateMedication: (id, data) => api.patch(`medications/medications/${id}/`, data),
 
   // 8. Delete Medication (DELETE /api/medications/medications/{id}/)
-  deleteMedication: (id) => api.delete(`medications/medications/${id}/`)
+  deleteMedication: (id) => api.delete(`medications/medications/${id}/`),
+
+  // 9. Fetch notifications that need a popup
+  getUnalertedNotifications: () => api.get('medications/notifications/unalerted/'),
+
+  // 10. Mark notification as alerted
+  markAsAlerted: (id) => api.post(`medications/notifications/${id}/mark_alerted/`),
 };

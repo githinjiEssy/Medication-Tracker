@@ -867,6 +867,21 @@ class NotificationViewSet(viewsets.ModelViewSet):
         # Only return notifications for the currently logged-in user
         return Notification.objects.filter(patient=self.request.user)
     
+    @action(detail=False, methods=['get'])
+    def unalerted(self, request):
+        """Fetch notifications that haven't triggered a popup yet"""
+        notifications = self.get_queryset().filter(is_alerted=False)
+        serializer = self.get_serializer(notifications, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def mark_alerted(self, request, pk=None):
+        """Mark a notification as having triggered its popup"""
+        notification = self.get_object()
+        notification.is_alerted = True
+        notification.save()
+        return Response({'status': 'marked as alerted'})
+    
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
         """Mark a single notification as read"""
@@ -875,9 +890,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notification.save()
         return Response({'status': 'marked as read'})
     
-    def perform_create(self, serializer):
-        # 1. Save the new medication
-        medication = serializer.save()
+    
         
         # 2. Automatically generate Intakes and Reminders based on specific_times
         if medication.specific_times:

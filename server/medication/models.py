@@ -53,6 +53,8 @@ class Medication(models.Model):
         ('OTHER', 'Other')
     ]
     
+    
+    
     # Relationships
     patient = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -442,6 +444,10 @@ class Notification(models.Model):
     title = models.CharField(max_length=200)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
+    is_alerted = models.BooleanField(
+        default=False,
+            help_text = " Tracks if the browser popup/sound has already been triggered"
+            )
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:

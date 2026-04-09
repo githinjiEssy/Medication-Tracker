@@ -359,6 +359,6 @@ class AdherenceStatsSerializer(serializers.Serializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'title', 'message', 'is_read', 'created_at', 'medication']
+        fields = ['id', 'title', 'message', 'is_read', 'is_alerted','created_at', 'medication']
         read_only_fields = ['id', 'created_at']
         

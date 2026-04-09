@@ -12,9 +12,11 @@ import NotificationsPage from './pages/NotificationsPage'
 import SchedulePage from './pages/SchedulePage'
 import AccountSettings from './pages/SettingsPage'
 import ProfilePage from './pages/ProfilePage'
+import { useMedicationAlerts } from './hooks/useMedicationAlerts';
 
 function App() {
-
+  
+useMedicationAlerts();// Start the background monitoring
   return (
     <Router>
       <AuthProvider>
