@@ -22,6 +22,9 @@ export const medicationService = {
   // 7. Update Medication (PATCH /api/medications/medications/{id}/)
   updateMedication: (id, data) => api.patch(`medications/medications/${id}/`, data),
 
-  // 8. Delete Medication (DELETE /api/medications/medications/{id}/)
+  // 8. Update Medication Status (POST /api/medications/medications/{id}/update_status/)
+  updateMedicationStatus: (id, status) => api.post(`medications/medications/${id}/update_status/`, { status }),
+
+  // 9. Delete Medication (DELETE /api/medications/medications/{id}/)
   deleteMedication: (id) => api.delete(`medications/medications/${id}/`)
 };
