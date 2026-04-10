@@ -313,9 +313,8 @@ class MedicationViewSet(viewsets.ModelViewSet):
             # Find or create intake for current time
             intake_id = request.data.get('intake_id')
             now = timezone.now()
-            # scheduled_time = now.replace(second=0, microsecond=0)
 
-            # Use the status from the serializer, which allows for more flexible logging (e.g., marking as MISSED or LATE if needed)
+            # Use the status from the serializer, which allows for more flexible logging
             new_status = serializer.validated_data.get('status')
 
             # Use data from serializer, fallback to 'now' or medication defaults
@@ -323,14 +322,15 @@ class MedicationViewSet(viewsets.ModelViewSet):
             dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
 
             if intake_id:
-                # TARGETED LOGGING: Update the exact slot the user clicked (e.g., the 7:00 AM slot)
+                # TARGETED LOGGING: Update the exact slot the user clicked
+                from django.shortcuts import get_object_or_404
                 intake = get_object_or_404(MedicationIntake, id=intake_id, medication=medication)
                 intake.status = new_status
                 intake.taken_at = serializer.validated_data.get('taken_at', now)
                 intake.dosage_taken = serializer.validated_data.get('dosage_taken', medication.dosage)
                 intake.save()
             else:
-                # DEFAULT LOGGING: If no specific slot, log for the current time (rounding to nearest minute)
+                # DEFAULT LOGGING: If no specific slot, log for the current time
                 scheduled_time = now.replace(second=0, microsecond=0)
                 intake, created = MedicationIntake.objects.get_or_create(
                     medication=medication,
@@ -356,6 +356,30 @@ class MedicationViewSet(viewsets.ModelViewSet):
                     comment_type='NOTE',
                     content=serializer.validated_data['notes']
                 )
+            
+            # ==========================================
+            # --- ADDED: REFILL WARNING LOGIC ---
+            # ==========================================
+            # If they have 2 or fewer refills left, trigger a warning!
+            if medication.refills_remaining is not None and medication.refills_remaining <= 2:
+                # Check if we already warned them so we don't spam them every single dose
+                warning_exists = MedicationNotification.objects.filter(
+                    patient=request.user,
+                    medication=medication,
+                    notification_type='warning',
+                    is_read=False
+                ).exists()
+                
+                if not warning_exists:
+                    MedicationNotification.objects.create(
+                        patient=request.user,
+                        medication=medication,
+                        notification_type='warning',
+                        scheduled_time=timezone.now(),
+                        custom_title="Refill Required",
+                        custom_message=f"{medication.name} is down to {medication.refills_remaining} refills. Please contact your pharmacy."
+                    )
+            # ==========================================
             
             return Response(MedicationIntakeSerializer(intake).data)
         
@@ -925,8 +949,14 @@ class NotificationViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationSerializer
     
     def get_queryset(self):
-        # Only return notifications for the currently logged-in user
-        return MedicationNotification.objects.filter(patient=self.request.user)
+        # 1. Get the current time
+        now = timezone.now()
+        
+        # 2. Only return notifications that are due NOW or in the PAST
+        return MedicationNotification.objects.filter(
+            patient=self.request.user,
+            scheduled_time__lte=now  # <--- Hides the 15 future notifications!
+        )
     
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
@@ -935,38 +965,5 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notification.is_read = True
         notification.save()
         return Response({'status': 'marked as read'})
-    
-    def perform_create(self, serializer):
-        # 1. Save the new medication
-        medication = serializer.save()
-        
-        # 2. Automatically generate Intakes and Reminders based on specific_times
-        if medication.specific_times:
-            start = max(medication.start_date, date.today())
-            end = medication.end_date or (date.today() + timedelta(days=30))
-            end = min(end, date.today() + timedelta(days=30))
-            
-            curr = start
-            while curr <= end:
-                for time_str in medication.specific_times:
-                    hour, minute = map(int, time_str.split(':'))
-                    dt = datetime.combine(curr, datetime.min.time()).replace(hour=hour, minute=minute)
-                    dt = timezone.make_aware(dt)
-                    
-                    # Only schedule future reminders
-                    if dt >= timezone.now() - timedelta(minutes=5):
-                        # Create the Intake (So it shows up on your React Dashboard)
-                        MedicationIntake.objects.get_or_create(
-                            medication=medication,
-                            scheduled_time=dt,
-                            defaults={'status': 'PENDING', 'dosage_taken': medication.dosage}
-                        )
-                        # Create the Reminder (So Celery can find it and send a Notification)
-                        MedicationReminder.objects.get_or_create(
-                            medication=medication,
-                            reminder_time=dt,
-                            defaults={'is_sent': False}
-                        )
-                curr += timedelta(days=1)
                 
                 

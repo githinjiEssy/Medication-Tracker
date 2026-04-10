@@ -95,4 +95,10 @@ export const medicationService = {
 
   // 22. Mark notification as alerted
   markAsAlerted: (id) => api.post(`medications/notifications/${id}/mark_alerted/`),
+
+  // Fetch ALL notifications for the UI tab
+  getNotifications: () => api.get('medications/notifications/'),
+
+  // Mark a notification as read when clicked in the UI
+  markNotificationRead: (id) => api.post(`medications/notifications/${id}/mark_read/`),
 };

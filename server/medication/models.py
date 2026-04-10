@@ -425,8 +425,21 @@ class MedicationReminder(models.Model):
     
     
 class MedicationNotification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('dose', 'Dose'),
+        ('warning', 'Warning'),
+        ('info', 'Info'),
+    )
+    
     patient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    medication = models.ForeignKey(Medication, on_delete=models.CASCADE)
+    # Added null=True so you can send general "Info" that isn't tied to a specific pill
+    medication = models.ForeignKey(Medication, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # NEW FIELDS
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='dose')
+    custom_title = models.CharField(max_length=255, blank=True, null=True)
+    custom_message = models.TextField(blank=True, null=True)
+    
     scheduled_time = models.DateTimeField()
     is_alerted = models.BooleanField(default=False)
     is_read = models.BooleanField(default=False)
@@ -436,12 +449,24 @@ class MedicationNotification(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.medication.name} - {self.scheduled_time}"
-    # <--- ADD THESE PROPERTIES FOR THE REACT FRONTEND --->
+        med_name = self.medication.name if self.medication else "General Alert"
+        return f"{med_name} - {self.get_notification_type_display()}"
+
     @property
     def title(self):
-        return "Medication Reminder"
+        # If a custom title is provided, use it! Otherwise, fall back to defaults.
+        if self.custom_title:
+            return self.custom_title
+        if self.notification_type == 'warning':
+            return "Refill Required"
+        return "Dose Reminder"
 
     @property
     def message(self):
-        return f"Time to take your medication: {self.medication.name}"
+        if self.custom_message:
+            return self.custom_message
+        if self.notification_type == 'warning' and self.medication:
+            return f"Your prescription for {self.medication.name} is running low."
+        if self.medication:
+            return f"Time to take your medication: {self.medication.name}"
+        return "You have a new health alert."
